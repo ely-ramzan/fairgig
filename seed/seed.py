@@ -112,36 +112,6 @@ def gross_for_shift(platform_name: str, zone_name: str, hours: float) -> float:
     return round(base_per_hour * hours * multiplier, 2)
 
 
-def make_shift(
-    worker_id: str,
-    platform_id: str,
-    platform_name: str,
-    zone_name: str,
-    shift_dt: date,
-    verification_status: str = "pending",
-    import_source: str = "manual",
-) -> dict:
-    hours = round(random.uniform(2.0, 10.0), 2)
-    gross = gross_for_shift(platform_name, zone_name, hours)
-    rate = commission_rate(platform_name, shift_dt)
-    deductions = round(gross * rate, 2)
-    net = round(gross - deductions, 2)
-    return {
-        "id": pk(),
-        "worker_id": worker_id,
-        "platform_id": platform_id,
-        "shift_date": shift_dt,
-        "hours_worked": Decimal(str(hours)),
-        "gross_earned": Decimal(str(gross)),
-        "platform_deductions": Decimal(str(deductions)),
-        "net_received": Decimal(str(max(net, 0))),
-        "verification_status": verification_status,
-        "import_source": import_source,
-        "file_upload_id": None,
-        "created_at": datetime.combine(shift_dt, datetime.min.time()),
-    }
-
-
 # ── Truncate ──────────────────────────────────────────────────────────────────
 
 TABLES_IN_ORDER = [
@@ -448,8 +418,11 @@ def seed_screenshots(session: Session, shifts: list[dict]) -> list[dict]:
     """Generate ~3,000 screenshot records (fake Cloudinary URLs)."""
     print("Seeding screenshots...", end=" ", flush=True)
 
-    # ~37% of shifts have screenshots
-    sample_shifts = random.sample(shifts, min(3000, int(len(shifts) * 0.37)))
+    # ~65% of shifts have screenshots — higher coverage so the verification
+    # pipeline has enough eligible shifts to produce ~4,000 verified records,
+    # which gives the zone_earnings_summary view enough data per cell to satisfy
+    # the HAVING COUNT(DISTINCT worker_id) >= 5 k-anonymity threshold.
+    sample_shifts = random.sample(shifts, min(5500, int(len(shifts) * 0.65)))
     screenshots: list[dict] = []
 
     for shift in sample_shifts:
@@ -497,24 +470,25 @@ def seed_verifications(
     screenshots: list[dict],
 ) -> None:
     """
-    ~2,400 verifications:
-    - 60% confirmed
-    - 10% disputed
-    - 5%  unverifiable
-    Only shifts that have screenshots get verified (realistic workflow).
+    ~5,000 verifications from shifts that have screenshots:
+    - 60% confirmed  → ~4,000 shifts get verification_status='verified'
+    - 10% disputed   → ~667  shifts get verification_status='disputed'
+    - rest unverifiable
+    Using a 5,000-sample ensures enough verified shifts per zone+platform+week
+    cell to consistently satisfy HAVING COUNT(DISTINCT worker_id) >= 5.
     """
     print("Seeding verifications...", end=" ", flush=True)
 
     screenshot_shift_ids = {s["shift_log_id"] for s in screenshots}
     eligible_shifts = [s for s in shifts if s["id"] in screenshot_shift_ids]
 
-    # Sample ~2,400 eligible shifts
-    sample_size = min(2400, len(eligible_shifts))
+    # Sample up to 5,000 eligible shifts
+    sample_size = min(5000, len(eligible_shifts))
     sample_shifts = random.sample(eligible_shifts, sample_size)
 
-    # Distribute by status weights
-    n_confirmed = int(sample_size * 0.60 / 0.75)
-    n_disputed = int(sample_size * 0.10 / 0.75)
+    # 60% confirmed, 10% disputed, 30% unverifiable
+    n_confirmed = int(sample_size * 0.60)
+    n_disputed = int(sample_size * 0.10)
     n_unverifiable = sample_size - n_confirmed - n_disputed
 
     status_list = (
@@ -932,9 +906,9 @@ def main() -> None:
     print(f"  Verifiers:        10")
     print(f"  Advocates:        5")
     print(f"  Shift logs:       ~{len(shifts):,}")
-    print(f"  Screenshots:      ~3,000")
-    print(f"  Verifications:    ~2,400")
-    print(f"  Grievances:       {67}")
+    print(f"  Screenshots:      ~5,500")
+    print(f"  Verifications:    ~5,000 (~4,000 verified shifts)")
+    print(f"  Grievances:       67")
     print()
     print("Run: SELECT * FROM zone_earnings_summary LIMIT 5;")
     print("     to verify k-anonymized aggregates are populated.\n")
