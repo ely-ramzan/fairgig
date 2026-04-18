@@ -61,7 +61,7 @@ async def upload_shift_screenshot(
     )
     db.add(screenshot)
 
-    if shift.verification_status == "disputed":
+    if shift.verification_status in ("disputed", "unverifiable"):
         shift.verification_status = "pending"
 
     await db.commit()

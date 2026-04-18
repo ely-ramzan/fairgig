@@ -432,7 +432,8 @@ class TestVerifyShift:
         shift = make_shift(status="pending")
         session = MockSession(make_scalar_one_or_none(shift))
         resp = self._post(session, {"status": "approved"})
-        assert resp.status_code == 400
+        # Literal constraint rejects at schema level (422) before route code runs
+        assert resp.status_code in (400, 422)
 
     def test_shift_not_found_returns_404(self):
         session = MockSession(make_scalar_one_or_none(None))

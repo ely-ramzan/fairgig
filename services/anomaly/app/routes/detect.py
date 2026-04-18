@@ -93,13 +93,13 @@ async def analyze_worker(
 
 @router.get("/results/{worker_id}")
 async def get_results(
-    worker_id: str,
+    worker_id: uuid.UUID,
     severity: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
     stmt = select(AnomalyResult).where(
-        AnomalyResult.worker_id == uuid.UUID(worker_id)
+        AnomalyResult.worker_id == worker_id
     )
     if severity:
         stmt = stmt.where(AnomalyResult.severity == severity)

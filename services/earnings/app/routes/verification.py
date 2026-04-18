@@ -11,8 +11,6 @@ from app.services.verification_service import can_transition
 
 router = APIRouter(prefix="/api/earnings", tags=["verification"])
 
-VALID_STATUSES = {"verified", "disputed", "unverifiable"}
-
 
 def _shift_dict(s) -> dict:
     return {
@@ -62,15 +60,12 @@ async def verification_queue(
 
 @router.post("/shifts/{shift_id}/verify")
 async def verify_shift(
-    shift_id: str,
+    shift_id: uuid.UUID,
     body: VerifyRequest,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_role("verifier")),
 ):
-    if body.status not in VALID_STATUSES:
-        raise HTTPException(400, f"status must be one of: {VALID_STATUSES}")
-
-    result = await db.execute(select(ShiftLog).where(ShiftLog.id == uuid.UUID(shift_id)))
+    result = await db.execute(select(ShiftLog).where(ShiftLog.id == shift_id))
     shift = result.scalar_one_or_none()
     if not shift:
         raise HTTPException(404, "Shift not found")
@@ -84,7 +79,7 @@ async def verify_shift(
     shift.verification_status = body.status
 
     existing = await db.execute(
-        select(Verification).where(Verification.shift_log_id == uuid.UUID(shift_id))
+        select(Verification).where(Verification.shift_log_id == shift_id)
     )
     old = existing.scalar_one_or_none()
     if old:
@@ -92,7 +87,7 @@ async def verify_shift(
 
     verification = Verification(
         id=uuid.uuid4(),
-        shift_log_id=uuid.UUID(shift_id),
+        shift_log_id=shift_id,
         verifier_id=uuid.UUID(user["user_id"]),
         status=body.status,
         notes=body.notes,

@@ -5,7 +5,7 @@ const { PrismaClient } = require("@prisma/client");
 const authenticate = require("../middleware/auth");
 const { requireRole } = require("../middleware/auth");
 const { autoTag } = require("../services/autoTagger");
-const { createSchema, statusSchema } = require("../validators/grievanceValidator");
+const { createSchema, statusSchema, listQuerySchema, clustersQuerySchema } = require("../validators/grievanceValidator");
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -50,8 +50,11 @@ router.post("/", authenticate, async (req, res, next) => {
 // GET /api/grievances
 router.get("/", authenticate, async (req, res, next) => {
     try {
-        const { page = 1, limit = 20, platform_id, category, status, tag } = req.query;
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const { error, value } = listQuerySchema.validate(req.query, { abortEarly: false, convert: true });
+        if (error) return res.status(400).json({ detail: error.details.map((d) => d.message).join("; ") });
+
+        const { page, limit, platform_id, category, status, tag } = value;
+        const skip = (page - 1) * limit;
 
         const where = {};
         if (platform_id) where.platform_id = platform_id;
@@ -63,7 +66,7 @@ router.get("/", authenticate, async (req, res, next) => {
             prisma.grievances.findMany({
                 where,
                 skip,
-                take: parseInt(limit),
+                take: limit,
                 orderBy: { created_at: "desc" },
                 include: { grievance_tags: true },
             }),
@@ -78,9 +81,9 @@ router.get("/", authenticate, async (req, res, next) => {
         return res.json({
             items,
             total,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total_pages: Math.ceil(total / parseInt(limit)),
+            page,
+            limit,
+            total_pages: Math.ceil(total / limit),
         });
     } catch (err) {
         next(err);
@@ -90,8 +93,10 @@ router.get("/", authenticate, async (req, res, next) => {
 // GET /api/grievances/clusters  ← MUST be before /:id
 router.get("/clusters", authenticate, requireRole("advocate"), async (req, res, next) => {
     try {
-        const days = parseInt(req.query.days) || 30;
-        const minClusterSize = parseInt(req.query.min_cluster_size) || 3;
+        const { error, value } = clustersQuerySchema.validate(req.query, { abortEarly: false, convert: true });
+        if (error) return res.status(400).json({ detail: error.details.map((d) => d.message).join("; ") });
+
+        const { days, min_cluster_size: minClusterSize } = value;
 
         const clusters = await prisma.$queryRaw`
             SELECT

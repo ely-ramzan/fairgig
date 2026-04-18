@@ -2,7 +2,7 @@ VALID_TRANSITIONS: dict[str, list[str]] = {
     "pending":      ["verified", "disputed", "unverifiable"],
     "disputed":     ["pending"],
     "verified":     [],
-    "unverifiable": [],
+    "unverifiable": ["pending"],
 }
 
 

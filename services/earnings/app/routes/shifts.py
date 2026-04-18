@@ -50,9 +50,9 @@ async def import_shifts(
     platform_map = {p.name.lower(): str(p.id) for p in platforms}
 
     if ext == "csv":
-        valid_rows, errors = parse_csv(file_bytes, platform_map)
+        valid_rows, errors = parse_csv(file_bytes, platform_map, filename)
     else:
-        valid_rows, errors = parse_excel(file_bytes, platform_map)
+        valid_rows, errors = parse_excel(file_bytes, platform_map, filename)
 
     # upload to Cloudinary
     upload_result = upload_raw_file(file_bytes, filename)
@@ -211,14 +211,14 @@ async def list_platforms(
 # GET /api/earnings/worker/:id/shifts-raw  ← Anomaly Service calls this
 @router.get("/worker/{worker_id}/shifts-raw")
 async def get_worker_shifts_raw(
-    worker_id: str,
+    worker_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
     stmt = (
         select(ShiftLog, Platform.name.label("platform_name"))
         .join(Platform, ShiftLog.platform_id == Platform.id)
-        .where(ShiftLog.worker_id == uuid.UUID(worker_id))
+        .where(ShiftLog.worker_id == worker_id)
         .order_by(ShiftLog.shift_date)
     )
     result = await db.execute(stmt)
@@ -238,13 +238,13 @@ async def get_worker_shifts_raw(
 # GET /api/earnings/worker/:id/summary
 @router.get("/worker/{worker_id}/summary")
 async def worker_summary(
-    worker_id: str,
+    worker_id: uuid.UUID,
     date_from: date = None,
     date_to: date = None,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    if user["role"] == "worker" and user["user_id"] != worker_id:
+    if user["role"] == "worker" and user["user_id"] != str(worker_id):
         raise HTTPException(403, "Cannot access another worker's summary")
 
     aggregate_q = text("""
@@ -262,7 +262,7 @@ async def worker_summary(
           AND (:date_to   IS NULL OR shift_date <= :date_to)
     """)
     r = await db.execute(aggregate_q, {
-        "worker_id": worker_id,
+        "worker_id": str(worker_id),
         "date_from": date_from,
         "date_to": date_to,
     })
@@ -281,7 +281,7 @@ async def worker_summary(
         GROUP BY p.name ORDER BY net DESC
     """)
     pr = await db.execute(platform_q, {
-        "worker_id": worker_id,
+        "worker_id": str(worker_id),
         "date_from": date_from,
         "date_to": date_to,
     })
@@ -301,15 +301,15 @@ async def worker_summary(
 # GET /api/earnings/worker/:id/trends
 @router.get("/worker/{worker_id}/trends")
 async def worker_trends(
-    worker_id: str,
+    worker_id: uuid.UUID,
     months: int = Query(3, ge=1, le=12),
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    if user["role"] == "worker" and user["user_id"] != worker_id:
+    if user["role"] == "worker" and user["user_id"] != str(worker_id):
         raise HTTPException(403, "Cannot access another worker's trends")
 
-    params = {"worker_id": worker_id, "months": months}
+    params = {"worker_id": str(worker_id), "months": months}
 
     earnings_q = text("""
         SELECT DATE_TRUNC('week', shift_date)                       AS week,
@@ -359,16 +359,11 @@ async def worker_trends(
 # GET /api/earnings/shifts/:id  ← must come AFTER static routes (/platforms, /worker/...)
 @router.get("/shifts/{shift_id}")
 async def get_shift(
-    shift_id: str,
+    shift_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    try:
-        shift_uuid = uuid.UUID(shift_id)
-    except ValueError:
-        raise HTTPException(400, "Invalid shift ID format")
-
-    result = await db.execute(select(ShiftLog).where(ShiftLog.id == shift_uuid))
+    result = await db.execute(select(ShiftLog).where(ShiftLog.id == shift_id))
     shift = result.scalar_one_or_none()
     if not shift:
         raise HTTPException(404, "Shift not found")

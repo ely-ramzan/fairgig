@@ -22,6 +22,11 @@ TEMPLATES = {
         "A shift of {actual_value} hours on {shift_date} on {platform} seems unusually long. "
         "The expected range is {expected_low}-{expected_high} hours. Please verify this entry."
     ),
+    "below_minimum_wage": (
+        "Your effective hourly rate on {platform} on {shift_date} was PKR {actual_value}/hr, "
+        "which is below the minimum expected rate of PKR {expected_low}/hr. "
+        "This may indicate missing earnings or an unusually short shift."
+    ),
 }
 
 
