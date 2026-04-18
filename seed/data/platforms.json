@@ -1,0 +1,7 @@
+[
+  {"name": "Careem",    "category": "ride"},
+  {"name": "Foodpanda", "category": "delivery"},
+  {"name": "Uber",      "category": "ride"},
+  {"name": "InDriver",  "category": "ride"},
+  {"name": "Fiverr",    "category": "freelance"}
+]

@@ -1,0 +1,8 @@
+[
+  {"name": "Gulberg",     "city": "Lahore", "lat": 31.5204, "lng": 74.3587},
+  {"name": "DHA",         "city": "Lahore", "lat": 31.4816, "lng": 74.4085},
+  {"name": "Johar Town",  "city": "Lahore", "lat": 31.4697, "lng": 74.2728},
+  {"name": "Model Town",  "city": "Lahore", "lat": 31.4870, "lng": 74.3290},
+  {"name": "Bahria Town", "city": "Lahore", "lat": 31.3667, "lng": 74.1739},
+  {"name": "Cantt",       "city": "Lahore", "lat": 31.5497, "lng": 74.3586}
+]
