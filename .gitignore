@@ -1,5 +1,6 @@
-# Node.js
+# Node.js — never commit; install with npm/pnpm in each service directory
 node_modules/
+**/node_modules/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
