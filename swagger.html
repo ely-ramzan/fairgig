@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FairGig API — Swagger UI</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+  <style>
+    body { margin: 0; background: #fafafa; }
+    .swagger-ui .topbar { background: #1a1a2e; }
+    .swagger-ui .topbar .download-url-wrapper { display: none; }
+    .swagger-ui .info hgroup.main a { color: #e94560; }
+    .swagger-ui .scheme-container { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+  </style>
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+<script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js"></script>
+<script>
+const spec = {
+  openapi: "3.0.3",
+  info: {
+    title: "FairGig API",
+    version: "1.0.0",
+    description: `## FairGig — Gig Worker Advocacy Platform
+
+A microservices backend for tracking earnings, detecting anomalies, managing grievances, and issuing verifiable certificates for gig workers.
+
+### Services
+| Service | Port |
+|---|---|
+| Auth | 8001 |
+| Earnings | 8002 |
+| Anomaly | 8003 |
+| Grievance | 8004 |
+| Certificate | 8006 |
+
+### Roles
+- **worker** — Gig worker submitting earnings data
+- **verifier** — Reviews and verifies shift claims
+- **advocate** — Labour advocate with analytics access
+
+### How to authenticate
+1. Call \`POST /api/auth/login\` (or \`/register\`)
+2. Copy the \`access_token\` from the response
+3. Click **Authorize 🔒** at the top and paste the token
+4. All 🔒 padlock endpoints will now send \`Authorization: Bearer <token>\` automatically`
+  },
+  servers: [
+    { url: "http://localhost:8001", description: "Auth Service" },
+    { url: "http://localhost:8002", description: "Earnings Service" },
+    { url: "http://localhost:8003", description: "Anomaly Service" },
+    { url: "http://localhost:8004", description: "Grievance Service" },
+    { url: "http://localhost:8006", description: "Certificate Service" }
+  ],
+  components: {
+    securitySchemes: {
+      BearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+        description: "Paste the `access_token` returned by `/api/auth/login` or `/api/auth/register`"
+      }
+    },
+    schemas: {
+      // ─── Auth ────────────────────────────────────────────────────────────
+      RegisterRequest: {
+        type: "object",
+        required: ["email", "password", "display_name", "role"],
+        properties: {
+          email:        { type: "string", format: "email", example: "ali.hassan@example.com" },
+          password:     { type: "string", minLength: 8, example: "Secure@123" },
+          display_name: { type: "string", example: "Ali Hassan" },
+          role:         { type: "string", enum: ["worker","verifier","advocate"], example: "worker" },
+          phone:        { type: "string", example: "+923001234567" },
+          city_zone_id: { type: "string", format: "uuid", example: "550e8400-e29b-41d4-a716-446655440000", description: "Required when role = worker" }
+        }
+      },
+      LoginRequest: {
+        type: "object",
+        required: ["email","password"],
+        properties: {
+          email:    { type: "string", format: "email", example: "ali.hassan@example.com" },
+          password: { type: "string", example: "Secure@123" }
+        }
+      },
+      RefreshRequest: {
+        type: "object",
+        required: ["refresh_token"],
+        properties: {
+          refresh_token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+        }
+      },
+      AuthTokens: {
+        type: "object",
+        properties: {
+          access_token:  { type: "string" },
+          refresh_token: { type: "string" }
+        }
+      },
+      UserProfile: {
+        type: "object",
+        properties: {
+          id:             { type: "string", format: "uuid" },
+          email:          { type: "string" },
+          display_name:   { type: "string" },
+          role:           { type: "string" },
+          phone:          { type: "string" },
+          city_zone_id:   { type: "string", format: "uuid" },
+          city_zone_name: { type: "string" },
+          created_at:     { type: "string", format: "date-time" }
+        }
+      },
+      CityZone: {
+        type: "object",
+        properties: {
+          id:   { type: "string", format: "uuid" },
+          name: { type: "string" },
+          city: { type: "string" }
+        }
+      },
+      // ─── Earnings ────────────────────────────────────────────────────────
+      ShiftCreate: {
+        type: "object",
+        required: ["platform_id","shift_date","hours_worked","gross_earned","platform_deductions","net_received"],
+        properties: {
+          platform_id:          { type: "string", format: "uuid", example: "7e3f8c2a-1b4d-4e9f-a8c5-2d6e0f1a3b4c" },
+          shift_date:           { type: "string", format: "date", example: "2026-04-15" },
+          hours_worked:         { type: "string", example: "7.5" },
+          gross_earned:         { type: "string", example: "2625.00" },
+          platform_deductions:  { type: "string", example: "393.75" },
+          net_received:         { type: "string", example: "2231.25" }
+        }
+      },
+      ShiftObject: {
+        type: "object",
+        properties: {
+          id:                   { type: "string", format: "uuid" },
+          worker_id:            { type: "string", format: "uuid" },
+          platform_id:          { type: "string", format: "uuid" },
+          platform_name:        { type: "string" },
+          shift_date:           { type: "string", format: "date" },
+          hours_worked:         { type: "string" },
+          gross_earned:         { type: "string" },
+          platform_deductions:  { type: "string" },
+          net_received:         { type: "string" },
+          status:               { type: "string", enum: ["pending","verified","disputed","unverifiable"] },
+          created_at:           { type: "string", format: "date-time" }
+        }
+      },
+      PaginatedShifts: {
+        type: "object",
+        properties: {
+          items:       { type: "array", items: { "$ref": "#/components/schemas/ShiftObject" } },
+          total:       { type: "integer" },
+          page:        { type: "integer" },
+          limit:       { type: "integer" },
+          total_pages: { type: "integer" }
+        }
+      },
+      ImportResult: {
+        type: "object",
+        properties: {
+          upload_id:      { type: "string", format: "uuid" },
+          rows_imported:  { type: "integer" },
+          rows_errored:   { type: "integer" },
+          errors:         { type: "array", items: { type: "object" } }
+        }
+      },
+      Platform: {
+        type: "object",
+        properties: {
+          id:       { type: "string", format: "uuid" },
+          name:     { type: "string" },
+          category: { type: "string" }
+        }
+      },
+      Screenshot: {
+        type: "object",
+        properties: {
+          id:               { type: "string", format: "uuid" },
+          shift_log_id:     { type: "string", format: "uuid" },
+          url:              { type: "string" },
+          original_filename:{ type: "string" },
+          file_size_bytes:  { type: "integer" },
+          width:            { type: "integer" },
+          height:           { type: "integer" },
+          format:           { type: "string" }
+        }
+      },
+      VerifyRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          status:              { type: "string", enum: ["verified","disputed","unverifiable"], example: "verified" },
+          notes:               { type: "string", example: "Screenshot matches claimed amount exactly." },
+          verifier_gross:      { type: "string", example: "2625.00" },
+          verifier_deductions: { type: "string", example: "393.75" }
+        }
+      },
+      WorkerSummary: {
+        type: "object",
+        properties: {
+          total_gross:          { type: "string" },
+          total_deductions:     { type: "string" },
+          total_net:            { type: "string" },
+          total_hours:          { type: "string" },
+          shift_count:          { type: "integer" },
+          verified_count:       { type: "integer" },
+          avg_commission_rate:  { type: "string" },
+          platform_breakdown:   { type: "array", items: { type: "object" } }
+        }
+      },
+      WorkerTrends: {
+        type: "object",
+        properties: {
+          earnings_trend:          { type: "array", items: { type: "object" } },
+          commission_trend:        { type: "array", items: { type: "object" } },
+          city_median_comparison:  { type: "array", items: { type: "object" } }
+        }
+      },
+      // ─── Anomaly ─────────────────────────────────────────────────────────
+      EarningRecord: {
+        type: "object",
+        required: ["shift_date","platform","gross_earned","platform_deductions","net_received","hours_worked"],
+        properties: {
+          shift_date:           { type: "string", example: "2026-03-22" },
+          platform:             { type: "string", example: "Careem" },
+          gross_earned:         { type: "string", example: "2000.00" },
+          platform_deductions:  { type: "string", example: "300.00" },
+          net_received:         { type: "string", example: "1700.00" },
+          hours_worked:         { type: "string", example: "6.00" }
+        }
+      },
+      DetectRequest: {
+        type: "object",
+        required: ["earnings"],
+        properties: {
+          earnings: {
+            type: "array",
+            minItems: 3,
+            maxItems: 5000,
+            items: { "$ref": "#/components/schemas/EarningRecord" },
+            example: [
+              { shift_date: "2026-03-01", platform: "Careem", gross_earned: "2000.00", platform_deductions: "300.00", net_received: "1700.00", hours_worked: "6.00" },
+              { shift_date: "2026-03-03", platform: "Careem", gross_earned: "1900.00", platform_deductions: "285.00", net_received: "1615.00", hours_worked: "5.50" },
+              { shift_date: "2026-03-06", platform: "Careem", gross_earned: "5800.00", platform_deductions: "1740.00", net_received: "4060.00", hours_worked: "6.00" },
+              { shift_date: "2026-03-10", platform: "Bykea",  gross_earned: "1200.00", platform_deductions: "180.00", net_received: "1020.00", hours_worked: "4.00" },
+              { shift_date: "2026-03-15", platform: "Careem", gross_earned: "2100.00", platform_deductions: "315.00", net_received: "1785.00", hours_worked: "6.50" }
+            ]
+          }
+        }
+      },
+      AnomalyResult: {
+        type: "object",
+        properties: {
+          id:              { type: "string", format: "uuid" },
+          worker_id:       { type: "string", format: "uuid" },
+          anomaly_type:    { type: "string" },
+          severity:        { type: "string", enum: ["low","medium","high"] },
+          metric_name:     { type: "string" },
+          expected_low:    { type: "string" },
+          expected_high:   { type: "string" },
+          actual_value:    { type: "string" },
+          deviation_score: { type: "string" },
+          explanation:     { type: "string" },
+          detected_at:     { type: "string", format: "date-time" }
+        }
+      },
+      // ─── Grievance ───────────────────────────────────────────────────────
+      GrievanceCreate: {
+        type: "object",
+        required: ["platform_id","category","description"],
+        properties: {
+          platform_id:  { type: "string", format: "uuid", example: "7e3f8c2a-1b4d-4e9f-a8c5-2d6e0f1a3b4c" },
+          category:     { type: "string", enum: ["commission_change","deactivation","payment_delay","unfair_rating","safety","other"], example: "commission_change" },
+          description:  { type: "string", minLength: 10, example: "Platform raised my commission from 20% to 28% overnight without any prior notification or explanation." },
+          is_anonymous: { type: "boolean", default: true, example: true }
+        }
+      },
+      GrievanceObject: {
+        type: "object",
+        properties: {
+          id:               { type: "string", format: "uuid" },
+          platform_id:      { type: "string", format: "uuid" },
+          platform_name:    { type: "string" },
+          category:         { type: "string" },
+          description:      { type: "string" },
+          status:           { type: "string", enum: ["open","escalated","resolved"] },
+          is_anonymous:     { type: "boolean" },
+          created_at:       { type: "string", format: "date-time" },
+          grievance_tags:   { type: "array", items: { type: "object" } }
+        }
+      },
+      StatusPatchRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          status:           { type: "string", enum: ["escalated","resolved"], example: "escalated" },
+          resolution_notes: { type: "string", example: "Escalated to platform relations team for review." }
+        }
+      },
+      TagAddRequest: {
+        type: "object",
+        required: ["tag"],
+        properties: {
+          tag: { type: "string", example: "commission_hike" }
+        }
+      },
+      // ─── Certificate ─────────────────────────────────────────────────────
+      CertificateData: {
+        type: "object",
+        properties: {
+          cert_id:           { type: "string", format: "uuid" },
+          worker_name:       { type: "string" },
+          date_from:         { type: "string", format: "date" },
+          date_to:           { type: "string", format: "date" },
+          total_gross:       { type: "string" },
+          total_deductions:  { type: "string" },
+          total_net:         { type: "string" },
+          total_hours:       { type: "string" },
+          hourly_rate:       { type: "string" },
+          shift_count:       { type: "integer" },
+          verified_count:    { type: "integer" },
+          platform_breakdown:{ type: "array", items: { type: "object" } }
+        }
+      },
+      // ─── Errors ──────────────────────────────────────────────────────────
+      ValidationError: {
+        type: "object",
+        properties: {
+          error:   { type: "string", example: "validation_error" },
+          message: { type: "string", example: "Request validation failed" },
+          details: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                field:   { type: "string" },
+                message: { type: "string" }
+              }
+            }
+          }
+        }
+      },
+      Unauthorized: {
+        type: "object",
+        properties: {
+          detail: { type: "string", example: "Not authenticated" }
+        }
+      },
+      Forbidden: {
+        type: "object",
+        properties: {
+          detail: { type: "string", example: "Insufficient permissions" }
+        }
+      },
+      NotFound: {
+        type: "object",
+        properties: {
+          detail: { type: "string", example: "Resource not found" }
+        }
+      }
+    }
+  },
+  tags: [
+    { name: "Health",       description: "Liveness probes — no auth required" },
+    { name: "Auth",         description: "Registration, login, token refresh, profile — Port 8001" },
+    { name: "Shifts",       description: "Shift CRUD, CSV import — Port 8002" },
+    { name: "Screenshots",  description: "Earnings screenshot upload/retrieval — Port 8002" },
+    { name: "Verification", description: "Verifier queue and decision — Port 8002" },
+    { name: "Worker Stats", description: "Summary and trend endpoints — Port 8002" },
+    { name: "Anomaly",      description: "Anomaly detection engine — Port 8003" },
+    { name: "Grievances",   description: "Community grievance board — Port 8004" },
+    { name: "Certificate",  description: "Verifiable earnings certificate — Port 8006" }
+  ],
+  paths: {
+    // ═══════════════════════════════════════════════════════════════════
+    // HEALTH CHECKS
+    // ═══════════════════════════════════════════════════════════════════
+    "/health": {
+      get: {
+        tags: ["Health"],
+        summary: "Health check (all services)",
+        description: "Each service exposes GET /health. Select the correct server in the dropdown above.",
+        operationId: "health_check",
+        responses: {
+          "200": { description: "Service is alive", content: { "application/json": { example: { status: "ok" } } } }
+        }
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // AUTH SERVICE  (server index 0 → localhost:8001)
+    // ═══════════════════════════════════════════════════════════════════
+    "/api/auth/register": {
+      post: {
+        tags: ["Auth"],
+        summary: "Register a new user 🔓",
+        operationId: "auth_register",
+        servers: [{ url: "http://localhost:8001" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/RegisterRequest" },
+              examples: {
+                worker: {
+                  summary: "Register as a worker",
+                  value: { email: "ali.hassan@example.com", password: "Secure@123", display_name: "Ali Hassan", role: "worker", phone: "+923001234567", city_zone_id: "550e8400-e29b-41d4-a716-446655440000" }
+                },
+                verifier: {
+                  summary: "Register as a verifier",
+                  value: { email: "sara.verifier@example.com", password: "Verify@456", display_name: "Sara Khan", role: "verifier", phone: "+923009876543" }
+                },
+                advocate: {
+                  summary: "Register as an advocate",
+                  value: { email: "hamza.advocate@example.com", password: "Advocate@789", display_name: "Hamza Malik", role: "advocate", phone: "+923331234567" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "201": {
+            description: "Account created — tokens returned",
+            content: { "application/json": { schema: { allOf: [{ "$ref": "#/components/schemas/AuthTokens" }, { properties: { user: { "$ref": "#/components/schemas/UserProfile" } } }] } } }
+          },
+          "422": { description: "Validation error", content: { "application/json": { schema: { "$ref": "#/components/schemas/ValidationError" } } } }
+        }
+      }
+    },
+    "/api/auth/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Login 🔓",
+        operationId: "auth_login",
+        servers: [{ url: "http://localhost:8001" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/LoginRequest" },
+              examples: {
+                worker:    { summary: "Worker login",    value: { email: "ali.hassan@example.com",    password: "Secure@123"   } },
+                verifier:  { summary: "Verifier login",  value: { email: "sara.verifier@example.com", password: "Verify@456"  } },
+                advocate:  { summary: "Advocate login",  value: { email: "hamza.advocate@example.com",password: "Advocate@789"} }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Login successful", content: { "application/json": { schema: { "$ref": "#/components/schemas/AuthTokens" } } } },
+          "401": { description: "Invalid credentials" }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      post: {
+        tags: ["Auth"],
+        summary: "Refresh access token 🔓",
+        operationId: "auth_refresh",
+        servers: [{ url: "http://localhost:8001" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/RefreshRequest" },
+              example: { refresh_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ3b3JrZXItaWQiLCJ0eXBlIjoicmVmcmVzaCJ9.XXXX" }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "New token pair issued", content: { "application/json": { schema: { "$ref": "#/components/schemas/AuthTokens" } } } },
+          "401": { description: "Invalid or expired refresh token" }
+        }
+      }
+    },
+    "/api/auth/me": {
+      get: {
+        tags: ["Auth"],
+        summary: "Get my profile 🔑",
+        operationId: "auth_me",
+        servers: [{ url: "http://localhost:8001" }],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          "200": { description: "Authenticated user profile", content: { "application/json": { schema: { "$ref": "#/components/schemas/UserProfile" } } } },
+          "401": { description: "Not authenticated", content: { "application/json": { schema: { "$ref": "#/components/schemas/Unauthorized" } } } }
+        }
+      }
+    },
+    "/api/auth/validate": {
+      get: {
+        tags: ["Auth"],
+        summary: "Validate JWT (internal) 🔑",
+        description: "Called by other microservices to verify an inbound Bearer token. Returns decoded claims.",
+        operationId: "auth_validate",
+        servers: [{ url: "http://localhost:8001" }],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Token is valid",
+            content: { "application/json": { example: { user_id: "550e8400-e29b-41d4-a716-446655440000", role: "worker", city_zone_id: "660e8400-e29b-41d4-a716-446655440001" } } }
+          },
+          "401": { description: "Invalid token" }
+        }
+      }
+    },
+    "/api/auth/city-zones": {
+      get: {
+        tags: ["Auth"],
+        summary: "List city zones 🔓",
+        description: "Used to populate the city-zone dropdown during worker registration.",
+        operationId: "auth_city_zones",
+        servers: [{ url: "http://localhost:8001" }],
+        responses: {
+          "200": {
+            description: "List of city zones",
+            content: { "application/json": { schema: { type: "array", items: { "$ref": "#/components/schemas/CityZone" } }, example: [{ id: "550e8400-e29b-41d4-a716-446655440000", name: "Gulshan", city: "Karachi" }, { id: "660e8400-e29b-41d4-a716-446655440001", name: "DHA", city: "Lahore" }] } }
+          }
+        }
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // EARNINGS — SHIFTS
+    // ═══════════════════════════════════════════════════════════════════
+    "/api/earnings/shifts": {
+      post: {
+        tags: ["Shifts"],
+        summary: "Log a single shift 👷 worker only",
+        operationId: "shifts_create",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/ShiftCreate" },
+              examples: {
+                careem: {
+                  summary: "Careem shift — normal",
+                  value: { platform_id: "7e3f8c2a-1b4d-4e9f-a8c5-2d6e0f1a3b4c", shift_date: "2026-04-15", hours_worked: "7.5", gross_earned: "2625.00", platform_deductions: "393.75", net_received: "2231.25" }
+                },
+                bykea: {
+                  summary: "Bykea shift — short",
+                  value: { platform_id: "8f4a9d3b-2c5e-5f0a-b9d6-3e7f1a2b4c5d", shift_date: "2026-04-16", hours_worked: "3.0", gross_earned: "900.00", platform_deductions: "135.00", net_received: "765.00" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "201": { description: "Shift created", content: { "application/json": { schema: { "$ref": "#/components/schemas/ShiftObject" } } } },
+          "401": { description: "Not authenticated" },
+          "403": { description: "Worker role required" },
+          "422": { description: "Validation error", content: { "application/json": { schema: { "$ref": "#/components/schemas/ValidationError" }, example: { error: "validation_error", message: "Request validation failed", details: [{ field: "body → net_received", message: "net_received deviates more than 2% from gross_earned - platform_deductions" }] } } } }
+        }
+      },
+      get: {
+        tags: ["Shifts"],
+        summary: "List my shifts 🔑",
+        operationId: "shifts_list",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "page",        in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
+          { name: "limit",       in: "query", schema: { type: "integer", minimum: 1, maximum: 100, default: 20 } },
+          { name: "platform_id", in: "query", schema: { type: "string", format: "uuid" }, example: "7e3f8c2a-1b4d-4e9f-a8c5-2d6e0f1a3b4c" },
+          { name: "status",      in: "query", schema: { type: "string", enum: ["pending","verified","disputed","unverifiable"] } },
+          { name: "date_from",   in: "query", schema: { type: "string", format: "date" }, example: "2026-01-01" },
+          { name: "date_to",     in: "query", schema: { type: "string", format: "date" }, example: "2026-04-30" }
+        ],
+        responses: {
+          "200": { description: "Paginated shift list", content: { "application/json": { schema: { "$ref": "#/components/schemas/PaginatedShifts" } } } },
+          "401": { description: "Not authenticated" }
+        }
+      }
+    },
+    "/api/earnings/shifts/import": {
+      post: {
+        tags: ["Shifts"],
+        summary: "Import shifts from CSV/Excel 👷 worker only",
+        operationId: "shifts_import",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        description: `Upload a \`.csv\` or \`.xlsx\` file containing shift records.
+
+**Required columns:** \`platform\`, \`shift_date\`, \`hours_worked\`, \`gross_earned\`, \`platform_deductions\`, \`net_received\`
+
+**File rules:**
+- Max size: 10 MB
+- Max rows: 5 000
+- Formula injection characters (\`=\`, \`+\`, \`@\`) → row skipped
+- Null-like values (\`N/A\`, \`-\`, \`null\`) → treated as missing
+- European decimals (\`1.200,50\`) and currency prefix (\`PKR 1200\`) → normalised`,
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                required: ["file"],
+                properties: {
+                  file: { type: "string", format: "binary", description: ".csv or .xlsx file" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "201": { description: "Import complete", content: { "application/json": { schema: { "$ref": "#/components/schemas/ImportResult" }, example: { upload_id: "abc12345-0000-0000-0000-000000000001", rows_imported: 48, rows_errored: 2, errors: [{ row: 5, field: "net_received", message: "Deviates more than 2% from gross - deductions" }] } } } },
+          "400": { description: "Invalid file type or empty file" },
+          "403": { description: "Worker role required" }
+        }
+      }
+    },
+    "/api/earnings/shifts/{shift_id}": {
+      get: {
+        tags: ["Shifts"],
+        summary: "Get a single shift 🔑",
+        description: "Workers can only access their own shifts. Verifiers and advocates can access any shift.",
+        operationId: "shifts_get",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "shift_id", in: "path", required: true, schema: { type: "string", format: "uuid" }, example: "11111111-0000-0000-0000-000000000001" }
+        ],
+        responses: {
+          "200": { description: "Shift object", content: { "application/json": { schema: { "$ref": "#/components/schemas/ShiftObject" } } } },
+          "403": { description: "Cannot access another worker's shift" },
+          "404": { description: "Shift not found" }
+        }
+      }
+    },
+    "/api/earnings/imports": {
+      get: {
+        tags: ["Shifts"],
+        summary: "List my import history 🔑",
+        operationId: "imports_list",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Import history",
+            content: {
+              "application/json": {
+                example: [{ id: "abc12345-0000-0000-0000-000000000001", original_filename: "april_shifts.csv", file_type: "csv", rows_imported: 48, rows_errored: 2, import_status: "completed", uploaded_at: "2026-04-18T10:30:00Z" }]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/earnings/platforms": {
+      get: {
+        tags: ["Shifts"],
+        summary: "List all platforms 🔑",
+        operationId: "platforms_list",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Platform list",
+            content: { "application/json": { schema: { type: "array", items: { "$ref": "#/components/schemas/Platform" } }, example: [{ id: "7e3f8c2a-1b4d-4e9f-a8c5-2d6e0f1a3b4c", name: "Careem", category: "ride_hailing" }, { id: "8f4a9d3b-2c5e-5f0a-b9d6-3e7f1a2b4c5d", name: "Bykea", category: "delivery" }] } }
+          }
+        }
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // EARNINGS — SCREENSHOTS
+    // ═══════════════════════════════════════════════════════════════════
+    "/api/earnings/shifts/{shift_id}/screenshot": {
+      post: {
+        tags: ["Screenshots"],
+        summary: "Upload screenshot 👷 worker only",
+        description: "Upload a JPEG or PNG screenshot for a shift. Replaces any existing screenshot. If shift is `disputed` or `unverifiable` it is reset to `pending`.",
+        operationId: "screenshot_upload",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "shift_id", in: "path", required: true, schema: { type: "string", format: "uuid" }, example: "11111111-0000-0000-0000-000000000001" }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                required: ["file"],
+                properties: {
+                  file: { type: "string", format: "binary", description: "JPEG or PNG image" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "201": { description: "Screenshot uploaded", content: { "application/json": { schema: { "$ref": "#/components/schemas/Screenshot" } } } },
+          "403": { description: "Can only upload screenshots for own shifts" },
+          "404": { description: "Shift not found" }
+        }
+      },
+      get: {
+        tags: ["Screenshots"],
+        summary: "Get screenshot URL 🔑",
+        operationId: "screenshot_get",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "shift_id",  in: "path",  required: true, schema: { type: "string", format: "uuid" }, example: "11111111-0000-0000-0000-000000000001" },
+          { name: "thumbnail", in: "query", schema: { type: "boolean", default: false }, description: "Return 200×200 Cloudinary thumbnail URL" }
+        ],
+        responses: {
+          "200": { description: "Screenshot URL", content: { "application/json": { example: { url: "https://res.cloudinary.com/fairgig/image/upload/v1/screenshots/shift_abc.jpg", original_filename: "careem_april15.jpg" } } } },
+          "404": { description: "No screenshot for this shift" }
+        }
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // EARNINGS — VERIFICATION
+    // ═══════════════════════════════════════════════════════════════════
+    "/api/earnings/verification-queue": {
+      get: {
+        tags: ["Verification"],
+        summary: "Get verification queue ✅ verifier only",
+        description: "Returns all shifts with status `pending`, paginated, sorted oldest-first.",
+        operationId: "verification_queue",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "page",  in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 50, default: 20 } }
+        ],
+        responses: {
+          "200": { description: "Pending shifts", content: { "application/json": { schema: { "$ref": "#/components/schemas/PaginatedShifts" } } } },
+          "403": { description: "Verifier role required" }
+        }
+      }
+    },
+    "/api/earnings/shifts/{shift_id}/verify": {
+      post: {
+        tags: ["Verification"],
+        summary: "Submit verification decision ✅ verifier only",
+        description: `Submit a decision on a pending shift.
+
+**Valid state transitions:**
+- \`pending → verified\` | \`pending → disputed\` | \`pending → unverifiable\`
+- \`disputed → pending\` (worker re-submits screenshot, verifier reviews again)
+- \`unverifiable → pending\``,
+        operationId: "shifts_verify",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "shift_id", in: "path", required: true, schema: { type: "string", format: "uuid" }, example: "11111111-0000-0000-0000-000000000001" }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/VerifyRequest" },
+              examples: {
+                approve: {
+                  summary: "Approve shift",
+                  value: { status: "verified", notes: "Screenshot matches — gross PKR 2625, deductions PKR 393.75.", verifier_gross: "2625.00", verifier_deductions: "393.75" }
+                },
+                dispute: {
+                  summary: "Dispute shift",
+                  value: { status: "disputed", notes: "Screenshot is blurry and totals cannot be confirmed. Please re-upload." }
+                },
+                unverifiable: {
+                  summary: "Mark unverifiable",
+                  value: { status: "unverifiable", notes: "No screenshot uploaded and shift date is 90+ days ago." }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Updated shift", content: { "application/json": { schema: { "$ref": "#/components/schemas/ShiftObject" } } } },
+          "403": { description: "Verifier role required" },
+          "404": { description: "Shift not found" },
+          "422": { description: "Invalid state transition" }
+        }
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // EARNINGS — WORKER STATS
+    // ═══════════════════════════════════════════════════════════════════
+    "/api/earnings/worker/{worker_id}/shifts-raw": {
+      get: {
+        tags: ["Worker Stats"],
+        summary: "Raw shifts for anomaly engine 🔑 (internal)",
+        description: "Called internally by the Anomaly Service. Workers can only query their own ID.",
+        operationId: "worker_shifts_raw",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "worker_id", in: "path", required: true, schema: { type: "string", format: "uuid" }, example: "550e8400-e29b-41d4-a716-446655440000" }
+        ],
+        responses: {
+          "200": { description: "Raw shift records", content: { "application/json": { example: [{ shift_date: "2026-04-15", platform: "Careem", gross_earned: "2625.00", platform_deductions: "393.75", net_received: "2231.25", hours_worked: "7.5" }] } } }
+        }
+      }
+    },
+    "/api/earnings/worker/{worker_id}/summary": {
+      get: {
+        tags: ["Worker Stats"],
+        summary: "Earnings summary 🔑",
+        description: "Aggregate stats. Workers can only access their own data. Advocates see any worker.",
+        operationId: "worker_summary",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "worker_id",  in: "path",  required: true, schema: { type: "string", format: "uuid" }, example: "550e8400-e29b-41d4-a716-446655440000" },
+          { name: "date_from",  in: "query", schema: { type: "string", format: "date" }, example: "2026-01-01" },
+          { name: "date_to",    in: "query", schema: { type: "string", format: "date" }, example: "2026-04-30" }
+        ],
+        responses: {
+          "200": { description: "Summary", content: { "application/json": { schema: { "$ref": "#/components/schemas/WorkerSummary" }, example: { total_gross: "87500.00", total_deductions: "13125.00", total_net: "74375.00", total_hours: "280.5", shift_count: 38, verified_count: 32, avg_commission_rate: "15.00", platform_breakdown: [{ platform: "Careem", gross: "52500.00", shifts: 23 }, { platform: "Bykea", gross: "35000.00", shifts: 15 }] } } } }
+        }
+      }
+    },
+    "/api/earnings/worker/{worker_id}/trends": {
+      get: {
+        tags: ["Worker Stats"],
+        summary: "Earnings trends 🔑",
+        description: "Weekly earnings and commission trends. Workers can only access their own data.",
+        operationId: "worker_trends",
+        servers: [{ url: "http://localhost:8002" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "worker_id", in: "path",  required: true, schema: { type: "string", format: "uuid" }, example: "550e8400-e29b-41d4-a716-446655440000" },
+          { name: "months",    in: "query", schema: { type: "integer", minimum: 1, maximum: 12, default: 3 }, description: "Lookback window in months" }
+        ],
+        responses: {
+          "200": { description: "Trend data", content: { "application/json": { schema: { "$ref": "#/components/schemas/WorkerTrends" } } } }
+        }
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ANOMALY SERVICE
+    // ═══════════════════════════════════════════════════════════════════
+    "/api/anomaly/detect": {
+      post: {
+        tags: ["Anomaly"],
+        summary: "Run anomaly detection (stateless) 🔓",
+        description: "No auth required. Useful for testing the engine with custom data. Requires at least 3 records. Does **not** write to the database.",
+        operationId: "anomaly_detect",
+        servers: [{ url: "http://localhost:8003" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/DetectRequest" },
+              examples: {
+                normal: {
+                  summary: "5 shifts — 1 spike anomaly expected",
+                  value: {
+                    earnings: [
+                      { shift_date: "2026-03-01", platform: "Careem", gross_earned: "2000.00", platform_deductions: "300.00", net_received: "1700.00", hours_worked: "6.00" },
+                      { shift_date: "2026-03-03", platform: "Careem", gross_earned: "1900.00", platform_deductions: "285.00", net_received: "1615.00", hours_worked: "5.50" },
+                      { shift_date: "2026-03-06", platform: "Careem", gross_earned: "5800.00", platform_deductions: "1740.00", net_received: "4060.00", hours_worked: "6.00" },
+                      { shift_date: "2026-03-10", platform: "Bykea",  gross_earned: "1200.00", platform_deductions: "180.00", net_received: "1020.00", hours_worked: "4.00" },
+                      { shift_date: "2026-03-15", platform: "Careem", gross_earned: "2100.00", platform_deductions: "315.00", net_received: "1785.00", hours_worked: "6.50" }
+                    ]
+                  }
+                },
+                commission_spike: {
+                  summary: "10 shifts — commission rate jumps to 40%",
+                  value: {
+                    earnings: [
+                      { shift_date: "2026-02-01", platform: "Careem", gross_earned: "2000.00", platform_deductions: "300.00", net_received: "1700.00", hours_worked: "6.0" },
+                      { shift_date: "2026-02-05", platform: "Careem", gross_earned: "1800.00", platform_deductions: "270.00", net_received: "1530.00", hours_worked: "5.5" },
+                      { shift_date: "2026-02-10", platform: "Careem", gross_earned: "2200.00", platform_deductions: "330.00", net_received: "1870.00", hours_worked: "7.0" },
+                      { shift_date: "2026-02-14", platform: "Careem", gross_earned: "1900.00", platform_deductions: "285.00", net_received: "1615.00", hours_worked: "6.0" },
+                      { shift_date: "2026-02-18", platform: "Careem", gross_earned: "2100.00", platform_deductions: "315.00", net_received: "1785.00", hours_worked: "6.5" },
+                      { shift_date: "2026-02-20", platform: "Careem", gross_earned: "2000.00", platform_deductions: "800.00", net_received: "1200.00", hours_worked: "6.0" },
+                      { shift_date: "2026-02-24", platform: "Careem", gross_earned: "1950.00", platform_deductions: "292.50", net_received: "1657.50", hours_worked: "6.0" },
+                      { shift_date: "2026-02-27", platform: "Bykea",  gross_earned: "1100.00", platform_deductions: "165.00", net_received: "935.00",  hours_worked: "4.0" },
+                      { shift_date: "2026-03-02", platform: "Careem", gross_earned: "2050.00", platform_deductions: "307.50", net_received: "1742.50", hours_worked: "6.5" },
+                      { shift_date: "2026-03-05", platform: "Careem", gross_earned: "2000.00", platform_deductions: "300.00", net_received: "1700.00", hours_worked: "6.0" }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Detection results",
+            content: {
+              "application/json": {
+                example: {
+                  anomalies_found: 1,
+                  anomalies: [{
+                    type: "gross_spike",
+                    severity: "high",
+                    shift_date: "2026-03-06",
+                    platform: "Careem",
+                    metric: "gross_earned",
+                    expected_range: [1600, 2500],
+                    actual_value: 5800,
+                    deviation_score: 3.82,
+                    explanation: "Gross earnings of PKR 5,800 is 3.8 standard deviations above the rolling mean of PKR 1,950 for Careem shifts."
+                  }],
+                  summary: { total_records: 5, anomaly_rate: "20.0%", by_severity: { high: 1, medium: 0, low: 0 } }
+                }
+              }
+            }
+          },
+          "422": { description: "Fewer than 3 records provided" }
+        }
+      }
+    },
+    "/api/anomaly/analyze-worker": {
+      post: {
+        tags: ["Anomaly"],
+        summary: "Analyze my earnings 🔑 (worker / verifier / advocate)",
+        description: "Fetches the authenticated user's shifts from the Earnings Service, runs all detectors, and saves results to DB. Replaces any previous results for this worker.",
+        operationId: "anomaly_analyze_worker",
+        servers: [{ url: "http://localhost:8003" }],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Analysis complete",
+            content: {
+              "application/json": {
+                example: {
+                  anomalies_cached: 3,
+                  anomalies: [
+                    { anomaly_type: "commission_spike", severity: "high",   metric_name: "commission_rate",  actual_value: "40.00", explanation: "Commission rate jumped to 40% on 2026-02-20 vs rolling mean of 15%." },
+                    { anomaly_type: "gross_spike",      severity: "medium", metric_name: "gross_earned",     actual_value: "5800.00", explanation: "Gross earnings 3.8σ above rolling mean." },
+                    { anomaly_type: "low_hours",        severity: "low",    metric_name: "hours_worked",     actual_value: "1.50", explanation: "Shift logged for only 1.5 hours — below IQR lower bound of 3 hours." }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { description: "Not authenticated" }
+        }
+      }
+    },
+    "/api/anomaly/results/{worker_id}": {
+      get: {
+        tags: ["Anomaly"],
+        summary: "Get cached anomaly results 🔑",
+        operationId: "anomaly_results",
+        servers: [{ url: "http://localhost:8003" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "worker_id", in: "path",  required: true,  schema: { type: "string", format: "uuid" }, example: "550e8400-e29b-41d4-a716-446655440000" },
+          { name: "severity",  in: "query", required: false, schema: { type: "string", enum: ["low","medium","high"] }, description: "Filter by severity level" }
+        ],
+        responses: {
+          "200": { description: "Cached anomaly records", content: { "application/json": { schema: { type: "array", items: { "$ref": "#/components/schemas/AnomalyResult" } } } } },
+          "404": { description: "No results found — run /analyze-worker first" }
+        }
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // GRIEVANCE SERVICE
+    // ═══════════════════════════════════════════════════════════════════
+    "/api/grievances": {
+      post: {
+        tags: ["Grievances"],
+        summary: "Submit a grievance 🔑",
+        description: "Auto-tags the description using keyword analysis. `worker_id` is hidden in responses when `is_anonymous = true`.",
+        operationId: "grievances_create",
+        servers: [{ url: "http://localhost:8004" }],
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/GrievanceCreate" },
+              examples: {
+                commission: {
+                  summary: "Commission change complaint",
+                  value: { platform_id: "7e3f8c2a-1b4d-4e9f-a8c5-2d6e0f1a3b4c", category: "commission_change", description: "Careem raised my commission from 20% to 28% overnight without any notification. This drastically reduced my take-home pay.", is_anonymous: true }
+                },
+                deactivation: {
+                  summary: "Sudden deactivation",
+                  value: { platform_id: "7e3f8c2a-1b4d-4e9f-a8c5-2d6e0f1a3b4c", category: "deactivation", description: "My account was deactivated without any warning or explanation. I have been driving for 3 years with 4.8 stars.", is_anonymous: false }
+                },
+                payment: {
+                  summary: "Payment delay",
+                  value: { platform_id: "8f4a9d3b-2c5e-5f0a-b9d6-3e7f1a2b4c5d", category: "payment_delay", description: "Weekly payment has not arrived for 18 days. Support is unresponsive.", is_anonymous: true }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "201": { description: "Grievance submitted", content: { "application/json": { schema: { "$ref": "#/components/schemas/GrievanceObject" } } } },
+          "401": { description: "Not authenticated" },
+          "422": { description: "Validation error" }
+        }
+      },
+      get: {
+        tags: ["Grievances"],
+        summary: "Browse grievance board 🔑",
+        operationId: "grievances_list",
+        servers: [{ url: "http://localhost:8004" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "page",        in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
+          { name: "limit",       in: "query", schema: { type: "integer", minimum: 1, maximum: 100, default: 20 } },
+          { name: "platform_id", in: "query", schema: { type: "string", format: "uuid" } },
+          { name: "category",    in: "query", schema: { type: "string", enum: ["commission_change","deactivation","payment_delay","unfair_rating","safety","other"] } },
+          { name: "status",      in: "query", schema: { type: "string", enum: ["open","escalated","resolved"] } },
+          { name: "tag",         in: "query", schema: { type: "string", maxLength: 100 }, example: "commission_hike" }
+        ],
+        responses: {
+          "200": { description: "Paginated grievances", content: { "application/json": { example: { items: [], total: 0, page: 1, limit: 20, total_pages: 0 } } } }
+        }
+      }
+    },
+    "/api/grievances/clusters": {
+      get: {
+        tags: ["Grievances"],
+        summary: "Cluster analysis 📣 advocate only",
+        description: "Groups grievances by platform+category to surface systemic issues. A cluster forms when `complaint_count >= min_cluster_size` within the lookback window.",
+        operationId: "grievances_clusters",
+        servers: [{ url: "http://localhost:8004" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "days",             in: "query", schema: { type: "integer", minimum: 1,  maximum: 365, default: 30  }, description: "Lookback window in days" },
+          { name: "min_cluster_size", in: "query", schema: { type: "integer", minimum: 1,  maximum: 100, default: 3   }, description: "Min complaints to form a cluster" }
+        ],
+        responses: {
+          "200": {
+            description: "Cluster list",
+            content: {
+              "application/json": {
+                example: [{
+                  platform_name: "Careem",
+                  category: "commission_change",
+                  complaint_count: 17,
+                  earliest: "2026-03-12T00:00:00Z",
+                  latest: "2026-04-18T00:00:00Z",
+                  escalated_count: 4,
+                  common_tags: ["commission_hike", "no_notice"],
+                  sample_descriptions: ["Commission raised without notice", "Rate went from 20% to 28% overnight"]
+                }]
+              }
+            }
+          },
+          "403": { description: "Advocate role required" }
+        }
+      }
+    },
+    "/api/grievances/stats": {
+      get: {
+        tags: ["Grievances"],
+        summary: "Grievance statistics 📣 advocate only",
+        operationId: "grievances_stats",
+        servers: [{ url: "http://localhost:8004" }],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Dashboard stats",
+            content: {
+              "application/json": {
+                example: {
+                  total: 134,
+                  by_status: [{ status: "open", count: 89 }, { status: "escalated", count: 31 }, { status: "resolved", count: 14 }],
+                  by_category: [{ category: "commission_change", count: 52 }],
+                  by_platform: [{ platform: "Careem", count: 78 }],
+                  trending_tags: ["commission_hike", "deactivation", "payment_late"]
+                }
+              }
+            }
+          },
+          "403": { description: "Advocate role required" }
+        }
+      }
+    },
+    "/api/grievances/{id}": {
+      get: {
+        tags: ["Grievances"],
+        summary: "Get a grievance 🔑",
+        operationId: "grievances_get",
+        servers: [{ url: "http://localhost:8004" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" }, example: "aaaaaaaa-0000-0000-0000-000000000001" }
+        ],
+        responses: {
+          "200": { description: "Grievance object", content: { "application/json": { schema: { "$ref": "#/components/schemas/GrievanceObject" } } } },
+          "404": { description: "Grievance not found" }
+        }
+      },
+      delete: {
+        tags: ["Grievances"],
+        summary: "Delete a grievance 🔑",
+        description: "Workers can only delete their own grievances. Advocates can delete any.",
+        operationId: "grievances_delete",
+        servers: [{ url: "http://localhost:8004" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" }, example: "aaaaaaaa-0000-0000-0000-000000000001" }
+        ],
+        responses: {
+          "204": { description: "Deleted" },
+          "403": { description: "Cannot delete another worker's grievance" },
+          "404": { description: "Grievance not found" }
+        }
+      }
+    },
+    "/api/grievances/{id}/status": {
+      patch: {
+        tags: ["Grievances"],
+        summary: "Update grievance status 📣 advocate only",
+        description: `Advance a grievance through the workflow.
+
+**Valid transitions:**
+- \`open → escalated\`
+- \`open → resolved\`
+- \`escalated → resolved\`
+- \`resolved\` is terminal — no further transitions`,
+        operationId: "grievances_patch_status",
+        servers: [{ url: "http://localhost:8004" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" }, example: "aaaaaaaa-0000-0000-0000-000000000001" }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/StatusPatchRequest" },
+              examples: {
+                escalate: { summary: "Escalate",       value: { status: "escalated", resolution_notes: "Pattern identified — escalated to platform relations." } },
+                resolve:  { summary: "Mark resolved",  value: { status: "resolved",  resolution_notes: "Platform confirmed the commission rate has been reverted." } }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Updated grievance", content: { "application/json": { schema: { "$ref": "#/components/schemas/GrievanceObject" } } } },
+          "403": { description: "Advocate role required" },
+          "422": { description: "Invalid state transition" }
+        }
+      }
+    },
+    "/api/grievances/{id}/tags": {
+      post: {
+        tags: ["Grievances"],
+        summary: "Add tag to grievance 📣 advocate only",
+        operationId: "grievances_add_tag",
+        servers: [{ url: "http://localhost:8004" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" }, example: "aaaaaaaa-0000-0000-0000-000000000001" }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/TagAddRequest" },
+              examples: {
+                tag1: { summary: "Commission tag",    value: { tag: "commission_hike" } },
+                tag2: { summary: "Systemic issue tag",value: { tag: "systemic_issue"  } }
+              }
+            }
+          }
+        },
+        responses: {
+          "201": { description: "Tag added", content: { "application/json": { example: { id: "t1", grievance_id: "aaaaaaaa-0000-0000-0000-000000000001", tag: "commission_hike", created_at: "2026-04-19T10:00:00Z" } } } },
+          "403": { description: "Advocate role required" }
+        }
+      }
+    },
+    "/api/grievances/{id}/tags/{tag}": {
+      delete: {
+        tags: ["Grievances"],
+        summary: "Remove tag from grievance 📣 advocate only",
+        operationId: "grievances_delete_tag",
+        servers: [{ url: "http://localhost:8004" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "id",  in: "path", required: true, schema: { type: "string", format: "uuid" }, example: "aaaaaaaa-0000-0000-0000-000000000001" },
+          { name: "tag", in: "path", required: true, schema: { type: "string" },                  example: "commission_hike" }
+        ],
+        responses: {
+          "204": { description: "Tag removed" },
+          "403": { description: "Advocate role required" },
+          "404": { description: "Tag not found" }
+        }
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // CERTIFICATE SERVICE
+    // ═══════════════════════════════════════════════════════════════════
+    "/api/certificate/preview": {
+      get: {
+        tags: ["Certificate"],
+        summary: "Preview certificate data 🔑",
+        description: "Returns certificate data as JSON for frontend preview rendering.",
+        operationId: "certificate_preview",
+        servers: [{ url: "http://localhost:8006" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "date_from", in: "query", required: true,  schema: { type: "string", format: "date" }, example: "2026-01-01" },
+          { name: "date_to",   in: "query", required: true,  schema: { type: "string", format: "date" }, example: "2026-04-30" }
+        ],
+        responses: {
+          "200": { description: "Certificate data", content: { "application/json": { schema: { "$ref": "#/components/schemas/CertificateData" }, example: { cert_id: "cert-550e8400", worker_name: "Ali Hassan", date_from: "2026-01-01", date_to: "2026-04-30", total_gross: "87500.00", total_deductions: "13125.00", total_net: "74375.00", total_hours: "280.5", hourly_rate: "265.16", shift_count: 38, verified_count: 32, platform_breakdown: [{ platform: "Careem", gross: "52500.00", shifts: 23 }, { platform: "Bykea", gross: "35000.00", shifts: 15 }] } } } },
+          "401": { description: "Not authenticated" },
+          "422": { description: "date_from or date_to missing/invalid" }
+        }
+      }
+    },
+    "/api/certificate/generate": {
+      get: {
+        tags: ["Certificate"],
+        summary: "Generate HTML certificate 🔑",
+        description: "Returns a fully rendered Jinja2 HTML certificate page. Suitable for print-to-PDF.",
+        operationId: "certificate_generate",
+        servers: [{ url: "http://localhost:8006" }],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "date_from", in: "query", required: true,  schema: { type: "string", format: "date" }, example: "2026-01-01" },
+          { name: "date_to",   in: "query", required: true,  schema: { type: "string", format: "date" }, example: "2026-04-30" }
+        ],
+        responses: {
+          "200": { description: "HTML certificate page", content: { "text/html": { example: "<!DOCTYPE html><html>...certificate...</html>" } } },
+          "401": { description: "Not authenticated" }
+        }
+      }
+    }
+  }
+};
+
+window.onload = () => {
+  SwaggerUIBundle({
+    spec,
+    dom_id: "#swagger-ui",
+    presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+    layout: "StandaloneLayout",
+    deepLinking: true,
+    displayRequestDuration: true,
+    filter: true,
+    tryItOutEnabled: true,
+    requestInterceptor: (request) => {
+      // Persist the token in localStorage so it survives page refresh
+      const auth = request.headers["Authorization"];
+      if (auth && auth.startsWith("Bearer ")) {
+        localStorage.setItem("fairgig_token", auth.replace("Bearer ", ""));
+      }
+      return request;
+    },
+    onComplete: () => {
+      // Auto-restore token from localStorage on load
+      const saved = localStorage.getItem("fairgig_token");
+      if (saved) {
+        ui.preauthorizeApiKey
+          ? ui.preauthorizeApiKey("BearerAuth", saved)
+          : ui.preauthorizeSecurityDefinition("BearerAuth", { type: "apiKey", value: saved });
+      }
+    },
+    persistAuthorization: true,
+    defaultModelsExpandDepth: 1,
+    defaultModelExpandDepth: 2,
+    docExpansion: "list",
+    tagsSorter: "alpha",
+    operationsSorter: "alpha"
+  });
+};
+</script>
+</body>
+</html>
