@@ -75,9 +75,9 @@ Hour 13-14: Final testing. Presentation prep.
 | A1.3 | Set up `config.py` (copy from auth, add Cloudinary vars) | HIGH | 5 min |
 | A1.4 | Set up `database.py` with async engine + `get_db` dependency (copy from auth, add commit logic) | HIGH | 10 min |
 | A1.5 | Copy `models.py` from auth service (all models needed) | HIGH | 5 min |
-| A1.6 | Create `dependencies.py` with `validate_token()`, `get_current_user()`, `require_role()` — these call Auth Service via HTTP | HIGH | 20 min |
+| A1.6 | C**Deliverable:** Service starts on port 8002, dependencies resolve, auth validation works.
+reate `dependencies.py` with `validate_token()`, `get_current_user()`, `require_role()` — these call Auth Service via HTTP | HIGH | 20 min |
 
-**Deliverable:** Service starts on port 8002, dependencies resolve, auth validation works.
 
 ### Phase A2: Earnings — Shift CRUD (Hour 1-2.5)
 
