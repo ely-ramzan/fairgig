@@ -176,7 +176,7 @@ def upgrade() -> None:
     # Functional index for monthly aggregation — must use raw SQL
     op.execute(
         "CREATE INDEX idx_shifts_worker_month ON shift_logs"
-        "(worker_id, (DATE_TRUNC('month', shift_date)))"
+        "(worker_id, EXTRACT(YEAR FROM shift_date), EXTRACT(MONTH FROM shift_date))"
     )
 
     # ── screenshots ───────────────────────────────────────────────────────────
