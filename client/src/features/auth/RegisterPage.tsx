@@ -6,6 +6,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useRegister, useCityZones } from '../../hooks/useAuth';
 import { SKIP_AUTH_FOR_TESTING } from '../../config/testAuth';
 import { classifyAxiosError } from '../../lib/errors';
+import { roleHome } from '../../lib/roleHome';
 
 const ROLES = ['worker', 'verifier', 'advocate'] as const;
 type Role = (typeof ROLES)[number];
@@ -77,7 +78,9 @@ export function RegisterPage() {
     };
     try {
       await register_mut.mutateAsync(payload);
-      navigate('/dashboard');
+      // Route by the newly-registered role — hardcoding /dashboard would 403
+      // verifier/advocate accounts instantly.
+      navigate(roleHome(data.role), { replace: true });
     } catch {
       // Error rendered via register_mut.isError below; nothing to do here.
     }

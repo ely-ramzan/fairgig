@@ -5,6 +5,7 @@ import {
   useUserRole,
 } from '../../stores/authStore';
 import { SKIP_AUTH_FOR_TESTING } from '../../config/testAuth';
+import { roleHome } from '../../lib/roleHome';
 
 /**
  * Resolves `/` based on auth state:
@@ -47,13 +48,5 @@ export function RootRedirect() {
     return <Navigate to="/landing" replace />;
   }
 
-  switch (role) {
-    case 'verifier':
-      return <Navigate to="/verify" replace />;
-    case 'advocate':
-      return <Navigate to="/analytics" replace />;
-    case 'worker':
-    default:
-      return <Navigate to="/dashboard" replace />;
-  }
+  return <Navigate to={roleHome(role)} replace />;
 }

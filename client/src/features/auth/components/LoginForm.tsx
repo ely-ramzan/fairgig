@@ -5,18 +5,7 @@ import { loginSchema, type LoginFormValues } from '../../../schemas/loginSchema'
 import { useLocation, useNavigate } from 'react-router-dom';
 import { classifyAxiosError } from '../../../lib/errors';
 import { useAuthStore } from '../../../stores/authStore';
-
-function roleHome(role: string | null | undefined): string {
-  switch (role) {
-    case 'verifier':
-      return '/verify';
-    case 'advocate':
-      return '/analytics';
-    case 'worker':
-    default:
-      return '/dashboard';
-  }
-}
+import { roleHome, pathAllowedForRole } from '../../../lib/roleHome';
 
 export function LoginForm() {
   const navigate   = useNavigate();
@@ -37,8 +26,15 @@ export function LoginForm() {
       // Read role *after* the mutation — useLogin.onSuccess has already populated the store.
       const role = useAuthStore.getState().user?.role ?? null;
       const state = location.state as { from?: string } | null;
+      // Only honor the "return to X" intent if that path is reachable for this
+      // role; otherwise a verifier/advocate who originally tried /dashboard
+      // would land on /403 immediately after login.
+      const candidate =
+        state?.from && state.from !== '/login' ? state.from : null;
       const target =
-        state?.from && state.from !== '/login' ? state.from : roleHome(role);
+        candidate && pathAllowedForRole(candidate, role)
+          ? candidate
+          : roleHome(role);
       navigate(target, { replace: true });
     } catch {
       // Inline error rendered below; nothing to do here.
