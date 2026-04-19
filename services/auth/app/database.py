@@ -5,22 +5,45 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import DeclarativeBase
 
 from app.config import get_settings
+import os
 
 settings = get_settings()
 
-engine = create_async_engine(
-    settings.database_url,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    echo=False,
-)
+# Lazy initialization: engine created on first use, not at import time
+_engine = None
+_AsyncSessionLocal = None
 
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        if os.environ.get("VERCEL"):
+            from sqlalchemy.pool import NullPool
+            engine = create_async_engine(
+                settings.async_database_url,
+                connect_args={"ssl": "require"},
+                poolclass=NullPool,       
+            )
+        else:
+            engine = create_async_engine(
+                settings.async_database_url,
+                connect_args={"ssl": "require"},
+                pool_size=10,
+                max_overflow=20,
+                pool_pre_ping=True,
+            )
+    return _engine
+
+
+def get_session_maker():
+    global _AsyncSessionLocal
+    if _AsyncSessionLocal is None:
+        _AsyncSessionLocal = async_sessionmaker(
+            get_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
+    return _AsyncSessionLocal
 
 
 class Base(DeclarativeBase):
@@ -29,7 +52,7 @@ class Base(DeclarativeBase):
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Standard dependency — used by Auth Service and any service that doesn't query shift_logs."""
-    async with AsyncSessionLocal() as session:
+    async with get_session_maker()() as session:
         try:
             yield session
             await session.commit()

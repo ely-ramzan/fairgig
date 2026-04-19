@@ -47,7 +47,7 @@ fake = Faker()
 random.seed(42)
 Faker.seed(42)
 
-DEFAULT_PASSWORD = "fairgig123"
+DEFAULT_PASSWORD = "Secure@123"
 _hashed_default = bcrypt.hashpw(DEFAULT_PASSWORD.encode(), bcrypt.gensalt(rounds=12)).decode()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

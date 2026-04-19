@@ -9,8 +9,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = "postgresql+asyncpg://postgres:password@localhost:5432/fairgig"
-    auth_service_url: str = "http://localhost:8001"
+    async_database_url: str
+    auth_service_url: str
 
 
 @lru_cache

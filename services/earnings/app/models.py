@@ -217,7 +217,7 @@ class Verification(Base):
     __tablename__ = "verifications"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('confirmed', 'disputed', 'unverifiable')",
+            "status IN ('verified', 'disputed', 'unverifiable')",
             name="ck_verifications_status",
         ),
         UniqueConstraint("shift_log_id", name="uq_verification_per_shift"),

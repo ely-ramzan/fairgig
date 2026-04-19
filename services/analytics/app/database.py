@@ -5,16 +5,25 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import DeclarativeBase
 
 from app.config import get_settings
+import os
 
 settings = get_settings()
 
-engine = create_async_engine(
-    settings.database_url,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    echo=False,
-)
+if os.environ.get("VERCEL"):
+    from sqlalchemy.pool import NullPool
+    engine = create_async_engine(
+        settings.async_database_url,
+        connect_args={"ssl": "require"},
+        poolclass=NullPool,       
+    )
+else:
+    engine = create_async_engine(
+        settings.async_database_url,
+        connect_args={"ssl": "require"},
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+    )
 
 AsyncSessionLocal = async_sessionmaker(
     engine,

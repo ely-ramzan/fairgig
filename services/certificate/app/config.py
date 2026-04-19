@@ -8,8 +8,8 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
-    auth_service_url: str = "http://localhost:8001"
-    earnings_service_url: str = "http://localhost:8002"
+    auth_service_url: str 
+    earnings_service_url: str
 
 
 @lru_cache

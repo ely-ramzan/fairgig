@@ -9,17 +9,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = "postgresql+asyncpg://postgres:password@localhost:5432/fairgig"
-    jwt_secret: str = "change-this-secret"
+    async_database_url: str
+    jwt_secret: str 
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
-
-    cloudinary_cloud_name: str = ""
-    cloudinary_api_key: str = ""
-    cloudinary_api_secret: str = ""
-
-    auth_service_url: str = "http://localhost:8001"
+    cloudinary_cloud_name: str
+    cloudinary_api_key: str 
+    cloudinary_api_secret: str 
+    auth_service_url: str 
 
 
 @lru_cache

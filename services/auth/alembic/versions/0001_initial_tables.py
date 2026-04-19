@@ -238,7 +238,7 @@ def upgrade() -> None:
     # ── grievances ────────────────────────────────────────────────────────────
     op.create_table(
         "grievances",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, default=sa.text("gen_random_uuid()")),
         sa.Column(
             "worker_id",
             postgresql.UUID(as_uuid=True),
@@ -294,7 +294,7 @@ def upgrade() -> None:
     # ── grievance_tags ────────────────────────────────────────────────────────
     op.create_table(
         "grievance_tags",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, default=sa.text("gen_random_uuid()")),
         sa.Column(
             "grievance_id",
             postgresql.UUID(as_uuid=True),

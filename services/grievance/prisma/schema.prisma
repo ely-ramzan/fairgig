@@ -1,10 +1,3 @@
-// Prisma schema for the FairGig Grievance Service
-// Database: PostgreSQL 16
-// Run after setting DATABASE_URL in .env:
-//   npx prisma generate          — generate the Prisma Client
-//   npx prisma db pull           — if DB already exists, introspect it instead
-//   npx prisma migrate dev       — if managing migrations via Prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,34 +7,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── Referenced tables (managed by SQLAlchemy / Alembic in other services) ────
-// Prisma needs to know about these so foreign keys resolve.
-// We declare them here as read-only references — do NOT run prisma migrate
-// on these; they are owned by the auth / earnings services.
-
 model users {
-  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email        String       @unique @db.VarChar(255)
-  display_name String       @db.VarChar(100)
-  role         String       @db.VarChar(20)
-  created_at   DateTime?    @default(now()) @db.Timestamp(6)
-  grievances   grievances[]
+  id              String            @id @db.Uuid
+  email           String            @unique @db.VarChar(255)
+  phone           String?           @db.VarChar(20)
+  password_hash   String            @db.VarChar(255)
+  role            String            @db.VarChar(20)
+  display_name    String            @db.VarChar(100)
+  city_zone_id    String?           @db.Uuid
+  created_at      DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?         @default(now()) @db.Timestamp(6)
+  anomaly_results anomaly_results[]
+  file_uploads    file_uploads[]
+  grievances      grievances[]
+  shift_logs      shift_logs[]
+  city_zones      city_zones?       @relation(fields: [city_zone_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  verifications   verifications[]
 
+  @@index([city_zone_id, role], map: "idx_users_city_zone")
+  @@index([email], map: "idx_users_email")
+  @@index([role], map: "idx_users_role")
   @@map("users")
 }
 
 model platforms {
-  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id         String       @id @db.Uuid
   name       String       @unique @db.VarChar(100)
   category   String       @db.VarChar(30)
   created_at DateTime?    @default(now()) @db.Timestamp(6)
   grievances grievances[]
+  shift_logs shift_logs[]
 
   @@map("platforms")
 }
 
-// ── Grievance service owns these two tables ───────────────────────────────────
-
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model grievances {
   id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   worker_id        String           @db.Uuid
@@ -53,10 +53,9 @@ model grievances {
   resolution_notes String?
   created_at       DateTime?        @default(now()) @db.Timestamp(6)
   updated_at       DateTime?        @default(now()) @db.Timestamp(6)
-
-  worker           users            @relation(fields: [worker_id], references: [id], onDelete: Cascade)
-  platform         platforms        @relation(fields: [platform_id], references: [id])
   grievance_tags   grievance_tags[]
+  platform         platforms        @relation(fields: [platform_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  worker           users            @relation(fields: [worker_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([platform_id, category, created_at(sort: Desc)], map: "idx_grievances_platform_category")
   @@index([platform_id, category, created_at], map: "idx_grievances_cluster")
@@ -67,11 +66,130 @@ model grievance_tags {
   id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   grievance_id String     @db.Uuid
   tag          String     @db.VarChar(50)
-
-  grievance    grievances @relation(fields: [grievance_id], references: [id], onDelete: Cascade)
+  grievance    grievances @relation(fields: [grievance_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([grievance_id, tag], map: "uq_grievance_tag")
   @@index([grievance_id], map: "idx_tags_grievance")
   @@index([tag], map: "idx_tags_tag")
   @@map("grievance_tags")
+}
+
+model alembic_version {
+  version_num String @id(map: "alembic_version_pkc") @db.VarChar(32)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model anomaly_results {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  worker_id       String      @db.Uuid
+  shift_log_id    String?     @db.Uuid
+  anomaly_type    String      @db.VarChar(30)
+  severity        String      @db.VarChar(10)
+  metric_name     String?     @db.VarChar(50)
+  expected_low    Decimal?    @db.Decimal(12, 2)
+  expected_high   Decimal?    @db.Decimal(12, 2)
+  actual_value    Decimal?    @db.Decimal(12, 2)
+  deviation_score Decimal?    @db.Decimal(6, 2)
+  explanation     String
+  detected_at     DateTime?   @default(now()) @db.Timestamp(6)
+  shift_logs      shift_logs? @relation(fields: [shift_log_id], references: [id], onUpdate: NoAction)
+  users           users       @relation(fields: [worker_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([severity, detected_at(sort: Desc)], map: "idx_anomaly_severity")
+  @@index([anomaly_type], map: "idx_anomaly_type")
+  @@index([worker_id, detected_at(sort: Desc)], map: "idx_anomaly_worker")
+}
+
+model city_zones {
+  id         String    @id @db.Uuid
+  name       String    @db.VarChar(100)
+  city       String    @default("Lahore") @db.VarChar(100)
+  lat        Decimal?  @db.Decimal(10, 7)
+  lng        Decimal?  @db.Decimal(10, 7)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  users      users[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model file_uploads {
+  id                   String       @id @db.Uuid
+  worker_id            String       @db.Uuid
+  cloudinary_public_id String       @db.VarChar(255)
+  cloudinary_url       String
+  original_filename    String       @db.VarChar(255)
+  file_type            String       @db.VarChar(10)
+  file_size_bytes      Int?
+  rows_imported        Int?         @default(0)
+  rows_skipped         Int?         @default(0)
+  rows_errored         Int?         @default(0)
+  import_status        String       @default("processing") @db.VarChar(20)
+  error_summary        Json?
+  uploaded_at          DateTime?    @default(now()) @db.Timestamp(6)
+  processed_at         DateTime?    @db.Timestamp(6)
+  users                users        @relation(fields: [worker_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  shift_logs           shift_logs[]
+
+  @@index([worker_id, uploaded_at(sort: Desc)], map: "idx_file_uploads_worker")
+}
+
+model screenshots {
+  id                   String     @id @db.Uuid
+  shift_log_id         String     @unique @db.Uuid
+  cloudinary_public_id String     @db.VarChar(255)
+  cloudinary_url       String
+  original_filename    String?    @db.VarChar(255)
+  file_size_bytes      Int?
+  width                Int?
+  height               Int?
+  format               String?    @db.VarChar(10)
+  uploaded_at          DateTime?  @default(now()) @db.Timestamp(6)
+  shift_logs           shift_logs @relation(fields: [shift_log_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([shift_log_id], map: "idx_screenshots_shift")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model shift_logs {
+  id                  String            @id @db.Uuid
+  worker_id           String            @db.Uuid
+  platform_id         String            @db.Uuid
+  shift_date          DateTime          @db.Date
+  hours_worked        Decimal           @db.Decimal(5, 2)
+  gross_earned        Decimal           @db.Decimal(12, 2)
+  platform_deductions Decimal           @db.Decimal(12, 2)
+  net_received        Decimal           @db.Decimal(12, 2)
+  verification_status String            @default("pending") @db.VarChar(20)
+  import_source       String            @default("manual") @db.VarChar(10)
+  file_upload_id      String?           @db.Uuid
+  created_at          DateTime?         @default(now()) @db.Timestamp(6)
+  anomaly_results     anomaly_results[]
+  screenshots         screenshots?
+  file_uploads        file_uploads?     @relation(fields: [file_upload_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  platforms           platforms         @relation(fields: [platform_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users               users             @relation(fields: [worker_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  verifications       verifications?
+
+  @@unique([worker_id, platform_id, shift_date, gross_earned], map: "uq_shift_entry")
+  @@index([platform_id, shift_date], map: "idx_shifts_platform_date")
+  @@index([worker_id, shift_date(sort: Desc)], map: "idx_shifts_worker_date")
+  @@index([worker_id, platform_id, shift_date], map: "idx_shifts_worker_platform_date")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model verifications {
+  id                  String     @id @db.Uuid
+  shift_log_id        String     @unique(map: "uq_verification_per_shift") @db.Uuid
+  verifier_id         String     @db.Uuid
+  status              String     @db.VarChar(20)
+  notes               String?
+  verifier_gross      Decimal?   @db.Decimal(12, 2)
+  verifier_deductions Decimal?   @db.Decimal(12, 2)
+  verified_at         DateTime?  @default(now()) @db.Timestamp(6)
+  shift_logs          shift_logs @relation(fields: [shift_log_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users               users      @relation(fields: [verifier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status], map: "idx_verifications_status")
+  @@index([verifier_id, verified_at(sort: Desc)], map: "idx_verifications_verifier")
 }
