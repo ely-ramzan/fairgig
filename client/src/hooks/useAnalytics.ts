@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { analyticsApi } from '../api/analytics';
-import type { CommissionTrendPoint } from '../types/api';
+import type { CommissionTrendPoint, VulnerabilityFlagRow } from '../types/api';
 
 export type CommissionChartRow = { date: string; [platform: string]: string | number };
 
@@ -56,16 +56,15 @@ export function useIncomeDistribution() {
 export function useVulnerabilityFlags(params?: { threshold?: number }) {
   return useQuery({
     queryKey: ['analytics', 'vulnerability', params],
-    queryFn: () =>
-      analyticsApi.vulnerabilityFlags(params).then((r) => r.data as Record<string, unknown>[]),
+    queryFn: () => analyticsApi.vulnerabilityFlags(params).then((r) => r.data),
     staleTime: 1000 * 60 * 5,
-    select: (rows: Record<string, unknown>[]) =>
+    select: (rows: VulnerabilityFlagRow[]) =>
       rows.map((r) => ({
-        worker_id: String(r.worker_id ?? ''),
-        display_name: String(r.display_name ?? ''),
-        prev_month_net: Number(r.previous_month_income ?? 0),
-        curr_month_net: Number(r.current_month_income ?? 0),
-        drop_pct: Number(r.drop_percentage ?? 0),
+        worker_id:      r.worker_id,
+        display_name:   r.display_name,
+        prev_month_net: r.prev_month_net,
+        curr_month_net: r.curr_month_net,
+        drop_pct:       r.mom_drop_pct,
       })),
   });
 }

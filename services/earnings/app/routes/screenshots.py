@@ -26,12 +26,12 @@ def _screenshot_dict(sc, url: str) -> dict:
 
 @router.post("/shifts/{shift_id}/screenshot", status_code=201)
 async def upload_shift_screenshot(
-    shift_id: str,
+    shift_id: uuid.UUID,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_role("worker")),
 ):
-    result = await db.execute(select(ShiftLog).where(ShiftLog.id == uuid.UUID(shift_id)))
+    result = await db.execute(select(ShiftLog).where(ShiftLog.id == shift_id))
     shift = result.scalar_one_or_none()
     if not shift:
         raise HTTPException(404, "Shift not found")
@@ -39,10 +39,10 @@ async def upload_shift_screenshot(
         raise HTTPException(403, "Cannot upload screenshot for another worker's shift")
 
     file_bytes = await file.read()
-    upload = upload_screenshot(file_bytes, user["user_id"], shift_id)
+    upload = upload_screenshot(file_bytes, user["user_id"], str(shift_id))
 
     existing = await db.execute(
-        select(Screenshot).where(Screenshot.shift_log_id == uuid.UUID(shift_id))
+        select(Screenshot).where(Screenshot.shift_log_id == shift_id)
     )
     old = existing.scalar_one_or_none()
     if old:
@@ -50,7 +50,7 @@ async def upload_shift_screenshot(
 
     screenshot = Screenshot(
         id=uuid.uuid4(),
-        shift_log_id=uuid.UUID(shift_id),
+        shift_log_id=shift_id,
         cloudinary_public_id=upload["public_id"],
         cloudinary_url=upload["secure_url"],
         original_filename=file.filename,
@@ -70,13 +70,13 @@ async def upload_shift_screenshot(
 
 @router.get("/shifts/{shift_id}/screenshot")
 async def get_shift_screenshot(
-    shift_id: str,
+    shift_id: uuid.UUID,
     thumbnail: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
     result = await db.execute(
-        select(Screenshot).where(Screenshot.shift_log_id == uuid.UUID(shift_id))
+        select(Screenshot).where(Screenshot.shift_log_id == shift_id)
     )
     screenshot = result.scalar_one_or_none()
     if not screenshot:
