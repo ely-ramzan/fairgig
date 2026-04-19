@@ -14,11 +14,12 @@ from app.services.import_service import parse_csv, parse_excel
 router = APIRouter(prefix="/api/earnings", tags=["earnings"])
 
 
-def _shift_dict(s) -> dict:
+def _shift_dict(s, platform_name: str | None = None) -> dict:
     return {
         "id": str(s.id),
         "worker_id": str(s.worker_id),
         "platform_id": str(s.platform_id),
+        "platform_name": platform_name,
         "shift_date": str(s.shift_date),
         "hours_worked": float(s.hours_worked),
         "gross_earned": float(s.gross_earned),
@@ -169,7 +170,24 @@ async def list_shifts(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    stmt = select(ShiftLog).where(ShiftLog.worker_id == uuid.UUID(user["user_id"]))
+    base = select(ShiftLog).where(ShiftLog.worker_id == uuid.UUID(user["user_id"]))
+    if platform_id:
+        base = base.where(ShiftLog.platform_id == uuid.UUID(platform_id))
+    if status:
+        base = base.where(ShiftLog.verification_status == status)
+    if date_from:
+        base = base.where(ShiftLog.shift_date >= date_from)
+    if date_to:
+        base = base.where(ShiftLog.shift_date <= date_to)
+
+    total_r = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = total_r.scalar()
+
+    stmt = (
+        select(ShiftLog, Platform.name.label("platform_name"))
+        .join(Platform, ShiftLog.platform_id == Platform.id)
+        .where(ShiftLog.worker_id == uuid.UUID(user["user_id"]))
+    )
     if platform_id:
         stmt = stmt.where(ShiftLog.platform_id == uuid.UUID(platform_id))
     if status:
@@ -179,15 +197,12 @@ async def list_shifts(
     if date_to:
         stmt = stmt.where(ShiftLog.shift_date <= date_to)
 
-    total_r = await db.execute(select(func.count()).select_from(stmt.subquery()))
-    total = total_r.scalar()
-
     stmt = stmt.order_by(ShiftLog.shift_date.desc()).offset((page - 1) * limit).limit(limit)
     result = await db.execute(stmt)
-    shifts = result.scalars().all()
+    rows = result.all()
 
     return {
-        "items": [_shift_dict(s) for s in shifts],
+        "items": [_shift_dict(s, pname) for s, pname in rows],
         "total": total,
         "page": page,
         "limit": limit,
@@ -364,10 +379,15 @@ async def get_shift(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    result = await db.execute(select(ShiftLog).where(ShiftLog.id == shift_id))
-    shift = result.scalar_one_or_none()
-    if not shift:
+    result = await db.execute(
+        select(ShiftLog, Platform.name.label("platform_name"))
+        .join(Platform, ShiftLog.platform_id == Platform.id)
+        .where(ShiftLog.id == shift_id)
+    )
+    row = result.one_or_none()
+    if not row:
         raise HTTPException(404, "Shift not found")
+    shift, platform_name = row
     if user["role"] == "worker" and str(shift.worker_id) != user["user_id"]:
         raise HTTPException(403, "Cannot access another worker's shift")
-    return _shift_dict(shift)
+    return _shift_dict(shift, platform_name)

@@ -3,12 +3,14 @@ import { zodResolver }   from '@hookform/resolvers/zod';
 import { AppNav }        from '../../components/shared/AppNav';
 import { SerialHeader }  from '../../components/shared/SerialHeader';
 import { useCreateShift } from '../../hooks/useShifts';
+import { usePlatforms }  from '../../hooks/useWorkerData';
 import { shiftSchema, type ShiftFormValues } from '../../schemas/shiftSchema';
 import { useNavigate }   from 'react-router-dom';
 
 export function ShiftLogForm() {
   const navigate    = useNavigate();
   const createShift = useCreateShift();
+  const { data: platforms = [] } = usePlatforms();
 
   const {
     register,
@@ -32,8 +34,15 @@ export function ShiftLogForm() {
 
             <div className="flex flex-col gap-1">
               <label className="font-mono text-[10px] tracking-widest uppercase text-t3">Platform</label>
-              <input {...register('platform_id')} type="text" placeholder="Platform ID (UUID)"
-                className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 placeholder:text-t4 focus:outline-none focus:border-amber" />
+              <select
+                {...register('platform_id')}
+                className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber"
+              >
+                <option value="">Select a platform…</option>
+                {platforms.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
               {errors.platform_id && <span className="font-mono text-[10px] text-rust">{errors.platform_id.message}</span>}
             </div>
 

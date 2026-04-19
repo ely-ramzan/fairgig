@@ -2,6 +2,7 @@ import { useForm }          from 'react-hook-form';
 import { zodResolver }      from '@hookform/resolvers/zod';
 import { z }               from 'zod';
 import { useCreateGrievance } from '../../../hooks/useGrievances';
+import { usePlatforms }    from '../../../hooks/useWorkerData';
 
 const CATEGORIES = [
   'commission_change', 'deactivation', 'payment_delay',
@@ -23,6 +24,7 @@ interface GrievanceFormProps {
 
 export function GrievanceForm({ onSuccess }: GrievanceFormProps) {
   const create = useCreateGrievance();
+  const { data: platforms = [] } = usePlatforms();
 
   const {
     register,
@@ -44,9 +46,16 @@ export function GrievanceForm({ onSuccess }: GrievanceFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1">
-          <label className="font-mono text-[10px] tracking-widest uppercase text-t3">Platform ID</label>
-          <input {...register('platform_id')} type="text" placeholder="UUID"
-            className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 placeholder:text-t4 focus:outline-none focus:border-amber" />
+          <label className="font-mono text-[10px] tracking-widest uppercase text-t3">Platform</label>
+          <select
+            {...register('platform_id')}
+            className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber"
+          >
+            <option value="">Select a platform…</option>
+            {platforms.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
           {errors.platform_id && <span className="font-mono text-[10px] text-rust">{errors.platform_id.message}</span>}
         </div>
         <div className="flex flex-col gap-1">
