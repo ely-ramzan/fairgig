@@ -6,7 +6,8 @@
   "scripts": {
     "test": "jest",
     "start": "node src/index.js",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",
