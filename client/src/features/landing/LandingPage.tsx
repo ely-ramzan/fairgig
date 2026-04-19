@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { SmoothScroll } from '../../components/shared/SmoothScroll';
 
 const HERO_LINES = [
@@ -30,12 +31,18 @@ export function LandingPage() {
           <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6 md:px-10">
             <div className="font-serif text-2xl text-t1">FAIRGIG.</div>
             <div className="flex items-center gap-6">
-              <button className="font-mono text-xs text-t2 hover:text-amber transition-colors">
+              <Link
+                to="/login"
+                className="font-mono text-xs text-t2 hover:text-amber transition-colors"
+              >
                 Login
-              </button>
-              <button className="border border-border px-5 py-2 font-mono text-xs bg-t1 text-bg hover:bg-t2 transition-colors">
+              </Link>
+              <Link
+                to="/register"
+                className="border border-border px-5 py-2 font-mono text-xs bg-t1 text-bg hover:bg-t2 transition-colors"
+              >
                 Get Started
-              </button>
+              </Link>
             </div>
           </div>
         </header>
@@ -511,15 +518,24 @@ export function LandingPage() {
               </h2>
 
               <div className="flex w-full flex-col flex-wrap items-stretch gap-4 sm:w-auto sm:flex-row sm:items-center sm:justify-center sm:gap-6">
-                <button className="rounded-sm bg-amber px-6 py-3 font-mono text-[11px] tracking-[0.18em] uppercase text-black hover:opacity-80 transition-opacity">
+                <Link
+                  to="/register?role=worker"
+                  className="rounded-sm bg-amber px-6 py-3 font-mono text-[11px] tracking-[0.18em] uppercase text-black hover:opacity-80 transition-opacity"
+                >
                   Join as Worker
-                </button>
-                <button className="rounded-sm border border-border px-6 py-3 font-mono text-[11px] tracking-[0.18em] uppercase text-t1 hover:bg-surface transition-colors">
+                </Link>
+                <Link
+                  to="/register?role=verifier"
+                  className="rounded-sm border border-border px-6 py-3 font-mono text-[11px] tracking-[0.18em] uppercase text-t1 hover:bg-surface transition-colors"
+                >
                   Join as Verifier
-                </button>
-                <button className="px-4 py-3 font-mono text-sm text-t2 underline underline-offset-4 hover:text-t1 transition-colors">
+                </Link>
+                <Link
+                  to="/register?role=advocate"
+                  className="px-4 py-3 font-mono text-sm text-t2 underline underline-offset-4 hover:text-t1 transition-colors"
+                >
                   Access Advocate Portal
-                </button>
+                </Link>
               </div>
 
               <p className="max-w-xl font-sans text-sm text-t3 leading-relaxed">

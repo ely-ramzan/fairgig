@@ -40,16 +40,7 @@ export function EarningsTrendChart({ data }: EarningsTrendChartProps) {
           stroke={colors.jade}
           strokeWidth={1.5}
           dot={false}
-          name="Net"
-        />
-        <Line
-          type="monotone"
-          dataKey="gross_earned"
-          stroke={colors.t3}
-          strokeWidth={1}
-          dot={false}
-          strokeDasharray="4 4"
-          name="Gross"
+          name="Net income"
         />
       </LineChart>
     </ResponsiveContainer>

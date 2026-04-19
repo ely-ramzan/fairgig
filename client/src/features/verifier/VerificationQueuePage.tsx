@@ -1,8 +1,10 @@
 import { useState }         from 'react';
+import { isAxiosError }     from 'axios';
 import { AppNav }            from '../../components/shared/AppNav';
 import { SerialHeader }      from '../../components/shared/SerialHeader';
 import { ErrorState }        from '../../components/shared/ErrorState';
 import { VerificationForm }  from './components/VerificationForm';
+import { ScreenshotReview }  from './components/ScreenshotReview';
 import { ScreenshotUploadButton } from '../worker/components/ScreenshotUploadButton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { earningsApi }       from '../../api/earnings';
@@ -24,6 +26,23 @@ export function VerificationQueuePage() {
       qc.invalidateQueries({ queryKey: ['verification-queue'] });
       setCurrent((c) => c + 1);
     },
+  });
+
+  const shift = queue?.items?.[current];
+  const { data: screenshotMeta, isFetching: shotLoading } = useQuery({
+    queryKey: ['shift-screenshot', shift?.id],
+    queryFn: async () => {
+      if (!shift?.id) return null;
+      try {
+        const r = await earningsApi.getScreenshot(shift.id, true);
+        return r.data;
+      } catch (e) {
+        if (isAxiosError(e) && e.response?.status === 404) return null;
+        throw e;
+      }
+    },
+    enabled: !!shift?.id,
+    staleTime: 1000 * 30,
   });
 
   if (isPending) {
@@ -53,7 +72,6 @@ export function VerificationQueuePage() {
   }
 
   const shifts = queue?.items ?? [];
-  const shift  = shifts[current];
 
   if (!shift) {
     return (
@@ -91,6 +109,12 @@ export function VerificationQueuePage() {
             <div className="grid grid-cols-2 gap-x-6 gap-y-1 font-mono text-[10px] text-t2">
               <span className="text-t3">ID</span>
               <span>{shift.id.slice(0, 12)}…</span>
+              {shift.platform_name && (
+                <>
+                  <span className="text-t3">Platform</span>
+                  <span>{shift.platform_name}</span>
+                </>
+              )}
               <span className="text-t3">Date</span>
               <span>{shift.shift_date}</span>
               <span className="text-t3">Gross (PKR)</span>
@@ -106,15 +130,26 @@ export function VerificationQueuePage() {
             </div>
           </div>
 
-          {/* Screenshot upload for this shift */}
-          <div className="flex flex-col gap-2 border-t border-border pt-4">
+          {/* Screenshot review + upload */}
+          <div className="flex flex-col gap-3 border-t border-border pt-4">
             <div className="font-mono text-[9px] tracking-widest uppercase text-t4">
               Shift screenshot
             </div>
+            {shotLoading ? (
+              <div className="h-40 bg-elevated border border-border rounded-lg animate-pulse" />
+            ) : screenshotMeta?.url ? (
+              <ScreenshotReview
+                cloudinaryUrl={screenshotMeta.url}
+                workerName={`Worker ${shift.worker_id.slice(0, 8)}…`}
+                shiftDate={shift.shift_date}
+              />
+            ) : (
+              <p className="font-mono text-[10px] text-t4">No screenshot uploaded yet.</p>
+            )}
             <div className="flex items-center gap-3">
               <ScreenshotUploadButton shiftId={shift.id} />
               <span className="font-sans text-xs text-t3">
-                Upload the earnings screenshot to attach evidence before verifying.
+                Upload or replace the earnings screenshot as evidence before verifying.
               </span>
             </div>
           </div>

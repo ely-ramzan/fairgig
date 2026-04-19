@@ -15,20 +15,35 @@ export function useCityZones() {
   return useQuery({
     queryKey: ['city-zones'],
     queryFn:  () => authApi.cityZones().then((r) => r.data),
-    staleTime: Infinity,
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }
 
 export function useLogin() {
-  const setAuth = useAuthStore((s) => s.setAuth);
-
   return useMutation({
-    mutationFn: (payload: { email: string; password: string }) =>
-      authApi.login(payload).then((r) => r.data),
-    onSuccess: async (data) => {
-      // Fetch full user profile immediately after login
-      const me = await authApi.me().then((r) => r.data);
-      setAuth(me as AuthUser, data.access_token, data.refresh_token);
+    mutationFn: async (payload: { email: string; password: string }) => {
+      const tokens = await authApi.login(payload).then((r) => r.data);
+      // IMPORTANT: seed the tokens BEFORE calling /me — the axios request
+      // interceptor reads the access token from the store to build the
+      // Authorization header. Setting it after /me produced a 401 because
+      // the first /me call was unauthenticated.
+      useAuthStore.setState({
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+      });
+      try {
+        const me = await authApi.me().then((r) => r.data);
+        useAuthStore
+          .getState()
+          .setAuth(me as AuthUser, tokens.access_token, tokens.refresh_token);
+        return { tokens, me };
+      } catch (err) {
+        // Don't leave a half-authed store behind if /me fails.
+        useAuthStore.getState().clearAuth();
+        throw err;
+      }
     },
   });
 }

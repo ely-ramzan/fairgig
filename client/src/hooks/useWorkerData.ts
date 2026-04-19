@@ -41,8 +41,9 @@ export function useUploadScreenshot() {
   return useMutation({
     mutationFn: ({ shiftId, file }: { shiftId: string; file: File }) =>
       earningsApi.uploadScreenshot(shiftId, file).then((r) => r.data),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['shifts'] });
+      qc.invalidateQueries({ queryKey: ['shift-screenshot', vars.shiftId] });
     },
   });
 }
