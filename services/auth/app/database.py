@@ -1,15 +1,12 @@
 from typing import AsyncGenerator
-
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-
 from app.config import get_settings
 import os
 
 settings = get_settings()
 
-# Lazy initialization: engine created on first use, not at import time
 _engine = None
 _AsyncSessionLocal = None
 
@@ -19,13 +16,13 @@ def get_engine():
     if _engine is None:
         if os.environ.get("VERCEL"):
             from sqlalchemy.pool import NullPool
-            engine = create_async_engine(
+            _engine = create_async_engine(          # ← _engine not engine
                 settings.async_database_url,
                 connect_args={"ssl": "require"},
-                poolclass=NullPool,       
+                poolclass=NullPool,
             )
         else:
-            engine = create_async_engine(
+            _engine = create_async_engine(          # ← _engine not engine
                 settings.async_database_url,
                 connect_args={"ssl": "require"},
                 pool_size=10,
@@ -51,7 +48,6 @@ class Base(DeclarativeBase):
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Standard dependency — used by Auth Service and any service that doesn't query shift_logs."""
     async with get_session_maker()() as session:
         try:
             yield session
@@ -64,24 +60,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def get_db_with_rls(user_id: str, role: str) -> AsyncGenerator[AsyncSession, None]:
-    """
-    RLS-aware dependency for Earnings and Analytics services.
-
-    Sets the two session-local GUC variables that the shift_logs RLS policy reads:
-        SET LOCAL app.current_user_id = '<uuid>';
-        SET LOCAL app.current_role    = '<role>';
-
-    Usage in another service's route:
-        async def get_db_rls(current_user=Depends(get_current_user)):
-            async for session in get_db_with_rls(str(current_user.id), current_user.role):
-                yield session
-
-    NOTE: RLS does NOT apply to PostgreSQL superusers by default (no FORCE ROW LEVEL
-    SECURITY).  Connecting via the postgres superuser account (the default DATABASE_URL)
-    bypasses RLS entirely, which is the simplest approach for development.  Use this
-    helper only when you want per-user row filtering enforced at the DB layer.
-    """
-    async with AsyncSessionLocal() as session:
+    async with get_session_maker()() as session:    # ← get_session_maker()() not AsyncSessionLocal
         try:
             await session.execute(
                 text("SET LOCAL app.current_user_id = :uid"), {"uid": user_id}
