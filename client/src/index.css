@@ -1,0 +1,68 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap");
+@import "tailwindcss";
+
+/* ── Default tokens (dark mode) — prevent flash before ThemeContext hydrates */
+:root {
+  --fg-bg:        #0D1411;
+  --fg-surface:   #15201B;
+  --fg-elevated:  #1C2A24;
+  --fg-border:    #25362F;
+  --fg-border-2:  #344A41;
+  --fg-t1:        #E8ECE9;
+  --fg-t2:        #9AA6A0;
+  --fg-t3:        #68756F;
+  --fg-t4:        #3B4540;
+  --fg-amber:     #D19F5C;
+  --fg-amber-bg:  rgba(209, 159, 92, 0.1);
+  --fg-amber-bdr: rgba(209, 159, 92, 0.25);
+  --fg-jade:      #448065;
+  --fg-jade-bg:   rgba(68, 128, 101, 0.1);
+  --fg-jade-bdr:  rgba(68, 128, 101, 0.25);
+  --fg-rust:      #BA6843;
+  --fg-rust-bg:   rgba(186, 104, 67, 0.1);
+  --fg-rust-bdr:  rgba(186, 104, 67, 0.25);
+  --fg-slate:     #526B5F;
+  --fg-slate-bg:  rgba(82, 107, 95, 0.1);
+  --fg-font-serif: 'Fraunces', Georgia, serif;
+  --fg-font-sans:  'DM Sans', system-ui, sans-serif;
+  --fg-font-mono:  'JetBrains Mono', monospace;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+body {
+  background-color: var(--fg-bg);
+  color: var(--fg-t1);
+  font-family: var(--fg-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Font utility classes ─────────────────────────────────────────────────── */
+.font-serif { font-family: var(--fg-font-serif) !important; }
+.font-mono  { font-family: var(--fg-font-mono)  !important; }
+.font-playfair { font-family: 'Playfair Display', Georgia, serif !important; }
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--fg-bg); }
+::-webkit-scrollbar-thumb { background: var(--fg-border-2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--fg-t3); }
+
+/* ── Focus ring ───────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 1.5px solid var(--fg-amber);
+  outline-offset: 2px;
+}
+
+/* ── Native <select> — OS dropdowns are often light while theme text stays light;
+   option colors must be explicit for readable contrast (esp. Windows + Chrome). */
+select.fg-select-compatible {
+  background-color: var(--fg-elevated);
+  color: var(--fg-t1);
+}
+
+select.fg-select-compatible option {
+  /* !important beats inherited theme text on OS-native light dropdowns */
+  color: #0f1713 !important;
+  background-color: #f2f1ec !important;
+}
