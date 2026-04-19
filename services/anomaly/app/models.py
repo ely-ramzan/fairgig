@@ -49,6 +49,16 @@ class User(Base):
     anomaly_results: Mapped[List["AnomalyResult"]] = relationship("AnomalyResult", back_populates="worker")
 
 
+class ShiftLog(Base):
+    """Minimal stub so AnomalyResult.shift_log_id FK resolves at flush time.
+    The authoritative model is owned by the earnings service; this mirror only
+    needs the tablename and primary key for SQLAlchemy's metadata graph."""
+
+    __tablename__ = "shift_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+
+
 class AnomalyResult(Base):
     __tablename__ = "anomaly_results"
     __table_args__ = (
