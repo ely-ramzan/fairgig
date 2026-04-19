@@ -1,11 +1,11 @@
 // CertificatePage — always renders light (paper document), ignores app theme.
 import { useState }  from 'react';
 import { useCertificateGenerateMutation, useCertificatePreview } from '../../hooks/useCertificate';
-import { useCurrentUser } from '../../stores/authStore';
 import { AppNav }         from '../../components/shared/AppNav';
+import { SerialHeader }   from '../../components/shared/SerialHeader';
+import { formatPKR }      from '../../lib/formatting';
 
 export function CertificatePage() {
-  const user = useCurrentUser();
   const [start, setStart] = useState('');
   const [end,   setEnd]   = useState('');
 
@@ -23,6 +23,7 @@ export function CertificatePage() {
     <>
       <AppNav />
       <main className="max-w-3xl mx-auto px-4 py-8">
+        <SerialHeader serial="06 —" label="Income certificate" />
         <div className="bg-surface border border-border rounded-lg p-6 mb-8 flex flex-wrap gap-4 items-end">
           <div className="flex flex-col gap-1">
             <label className="font-mono text-[10px] tracking-widest uppercase text-t3">
@@ -54,7 +55,7 @@ export function CertificatePage() {
             <button
               type="button"
               onClick={() => {
-                if (!start || !end || dateError || !user?.id) return;
+                if (!start || !end || dateError) return;
                 generate.mutate({ date_from: start, date_to: end });
               }}
               disabled={!start || !end || !!dateError || generate.isPending}
@@ -75,7 +76,8 @@ export function CertificatePage() {
           <div className="mb-6 bg-elevated border border-border rounded-lg p-4 font-mono text-[10px] text-t2 space-y-1">
             <div>Preview — {preview.worker_name}</div>
             <div>
-              Net {preview.total_net} PKR · {preview.shift_count} shifts · Verified {preview.verified_count}
+              Net {formatPKR(Number(preview.total_net), true)} · {preview.shift_count} shifts · Verified{' '}
+              {preview.verified_count}
             </div>
           </div>
         )}

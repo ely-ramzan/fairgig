@@ -7,10 +7,11 @@ import { ErrorState }       from '../../components/shared/ErrorState';
 import { EarningsTrendChart } from './components/EarningsTrendChart';
 import { ShiftTable }       from './components/ShiftTable';
 import { WorkerPercentileCard } from './components/WorkerPercentileCard';
-import { useWorkerSummary, useWorkerTrends } from '../../hooks/useWorkerData';
+import { useWorkerSummary, useWorkerTrends, useAnalyzeWorker } from '../../hooks/useWorkerData';
 import { useShifts }        from '../../hooks/useShifts';
 import { useAnomalies }     from '../../hooks/useAnomalies';
 import { useCurrentUser }   from '../../stores/authStore';
+import { useToast }         from '../../stores/uiStore';
 import { fromWorkerEarningsTrend } from '../../lib/chartHelpers';
 import { formatPKR, formatHours, formatPercent } from '../../lib/formatting';
 
@@ -36,6 +37,8 @@ function DashboardSkeleton() {
 export function DashboardPage() {
   const user = useCurrentUser();
   const wid  = user?.id ?? '';
+  const { toast } = useToast();
+  const analyzeWorker = useAnalyzeWorker();
 
   const { data: summary, isPending: sumPending, isError: sumError, error: sumErr, refetch: refetchSum } =
     useWorkerSummary(wid);
@@ -67,6 +70,26 @@ export function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         <SerialHeader serial="01 —" label="Dashboard" />
 
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <span className="font-mono text-[10px] tracking-widest uppercase text-t3">Anomaly analysis</span>
+          <button
+            type="button"
+            disabled={analyzeWorker.isPending || !wid}
+            onClick={() => {
+              analyzeWorker.mutate(undefined, {
+                onSuccess: (data) => {
+                  const n = (data as { anomalies_cached?: number }).anomalies_cached ?? 0;
+                  toast(`Analysis complete — ${n} cached anomalies`, 'success');
+                },
+                onError: () => toast('Could not refresh anomaly analysis', 'error'),
+              });
+            }}
+            className="font-mono text-[10px] tracking-widest uppercase px-3 py-1.5 rounded border border-amber text-amber hover:bg-amber-bg disabled:opacity-40 transition-colors"
+          >
+            {analyzeWorker.isPending ? 'Analyzing…' : 'Refresh anomaly analysis'}
+          </button>
+        </div>
+
         {highAnomalies.length > 0 && (
           <div className="flex flex-col gap-2 mb-6">
             {highAnomalies.slice(0, 3).map((a) => (
@@ -95,6 +118,36 @@ export function DashboardPage() {
             accent={(summary?.avg_commission_rate ?? 0) > 25}
           />
         </div>
+
+        {(summary?.platform_breakdown?.length ?? 0) > 0 && (
+          <div className="mb-8 bg-surface border border-border rounded-lg overflow-hidden">
+            <div className="px-4 py-2 border-b border-border font-mono text-[9px] tracking-widest uppercase text-t4">
+              By platform
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left font-mono text-[10px] text-t2">
+                <thead>
+                  <tr className="border-b border-border text-t4">
+                    <th className="px-4 py-2 font-normal">Platform</th>
+                    <th className="px-4 py-2 font-normal text-right">Shifts</th>
+                    <th className="px-4 py-2 font-normal text-right">Net</th>
+                    <th className="px-4 py-2 font-normal text-right">Commission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary!.platform_breakdown.map((row) => (
+                    <tr key={row.platform} className="border-b border-border/60 last:border-0">
+                      <td className="px-4 py-2 text-t1">{row.platform}</td>
+                      <td className="px-4 py-2 text-right">{row.shifts}</td>
+                      <td className="px-4 py-2 text-right">{formatPKR(row.net, true)}</td>
+                      <td className="px-4 py-2 text-right">{formatPercent(row.commission_pct)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         <div className="mb-8">
           <WorkerPercentileCard

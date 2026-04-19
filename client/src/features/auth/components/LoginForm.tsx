@@ -2,10 +2,25 @@ import { useForm }            from 'react-hook-form';
 import { zodResolver }        from '@hookform/resolvers/zod';
 import { useLogin }           from '../../../hooks/useAuth';
 import { loginSchema, type LoginFormValues } from '../../../schemas/loginSchema';
-import { useNavigate }        from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { classifyAxiosError } from '../../../lib/errors';
+import { useAuthStore } from '../../../stores/authStore';
+
+function roleHome(role: string | null | undefined): string {
+  switch (role) {
+    case 'verifier':
+      return '/verify';
+    case 'advocate':
+      return '/analytics';
+    case 'worker':
+    default:
+      return '/dashboard';
+  }
+}
 
 export function LoginForm() {
   const navigate   = useNavigate();
+  const location   = useLocation();
   const login      = useLogin();
 
   const {
@@ -14,9 +29,20 @@ export function LoginForm() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
 
+  const loginError = login.isError ? classifyAxiosError(login.error).message : null;
+
   const onSubmit = async (data: LoginFormValues) => {
-    await login.mutateAsync(data);
-    navigate('/dashboard');
+    try {
+      await login.mutateAsync(data);
+      // Read role *after* the mutation — useLogin.onSuccess has already populated the store.
+      const role = useAuthStore.getState().user?.role ?? null;
+      const state = location.state as { from?: string } | null;
+      const target =
+        state?.from && state.from !== '/login' ? state.from : roleHome(role);
+      navigate(target, { replace: true });
+    } catch {
+      // Inline error rendered below; nothing to do here.
+    }
   };
 
   return (
@@ -53,9 +79,12 @@ export function LoginForm() {
         )}
       </div>
 
-      {login.isError && (
-        <div className="font-mono text-[10px] text-rust text-center">
-          Invalid credentials. Please try again.
+      {loginError && (
+        <div
+          role="alert"
+          className="rounded border border-rust/40 bg-rust/10 px-3 py-2 font-mono text-[10px] text-rust text-center"
+        >
+          {loginError}
         </div>
       )}
 

@@ -5,6 +5,7 @@ import { SerialHeader } from '../../components/shared/SerialHeader';
 import { ErrorState }   from '../../components/shared/ErrorState';
 import { ShiftTable }   from './components/ShiftTable';
 import { useShifts }    from '../../hooks/useShifts';
+import { usePlatforms } from '../../hooks/useWorkerData';
 
 const LIMIT = 20;
 
@@ -27,7 +28,20 @@ function ShiftTableSkeleton() {
 
 export function ShiftsPage() {
   const [page, setPage] = useState(1);
-  const { data, isLoading, isError, error, refetch } = useShifts({ page, limit: LIMIT });
+  const [platformId, setPlatformId] = useState('');
+  const [status, setStatus] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const { data: platforms = [] } = usePlatforms();
+
+  const { data, isLoading, isError, error, refetch } = useShifts({
+    page,
+    limit: LIMIT,
+    platform_id: platformId || undefined,
+    status: status || undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  });
   const shifts     = data?.items ?? [];
   const totalPages = data?.total_pages ?? 1;
 
@@ -43,6 +57,67 @@ export function ShiftsPage() {
           >
             + Log Shift
           </Link>
+        </div>
+
+        <div className="mb-4 flex flex-wrap gap-3 items-end">
+          <div className="flex flex-col gap-1 min-w-[140px]">
+            <label className="font-mono text-[9px] tracking-widest uppercase text-t4">Platform</label>
+            <select
+              value={platformId}
+              onChange={(e) => {
+                setPlatformId(e.target.value);
+                setPage(1);
+              }}
+              className="fg-select-compatible bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber"
+            >
+              <option value="">All</option>
+              {platforms.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1 min-w-[120px]">
+            <label className="font-mono text-[9px] tracking-widest uppercase text-t4">Status</label>
+            <select
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(1);
+              }}
+              className="fg-select-compatible bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber"
+            >
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="verified">Verified</option>
+              <option value="disputed">Disputed</option>
+              <option value="unverifiable">Unverifiable</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-mono text-[9px] tracking-widest uppercase text-t4">From</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => {
+                setDateFrom(e.target.value);
+                setPage(1);
+              }}
+              className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-mono text-[9px] tracking-widest uppercase text-t4">To</label>
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => {
+                setDateTo(e.target.value);
+                setPage(1);
+              }}
+              className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber"
+            />
+          </div>
         </div>
 
         {isError ? (

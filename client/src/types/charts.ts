@@ -3,7 +3,8 @@
 export interface EarningsTrendPoint {
   date:          string; // "2026-01-05"
   net_received:  number;
-  gross_earned:  number;
+  /** Present when derived from raw shifts (daily aggregates); omitted for weekly worker trends. */
+  gross_earned?: number;
 }
 
 export interface CommissionPoint {

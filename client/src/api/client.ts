@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
-import { getEnv } from '../config/env';
+import { getEnv, isServiceConfigured, type ServiceKey } from '../config/env';
 import { useAuthStore } from '../stores/authStore';
 import {
   SKIP_AUTH_FOR_TESTING,
@@ -17,7 +17,7 @@ function getRefreshToken(): string | null {
   return useAuthStore.getState().refreshToken;
 }
 
-const { resolved: BASE_URLS } = getEnv();
+const BASE_URLS = getEnv().resolved;
 
 /** Single in-flight refresh — concurrent 401s share one refresh call. */
 let refreshPromise: Promise<string> | null = null;
@@ -31,7 +31,7 @@ async function refreshAccessToken(): Promise<string> {
   refreshPromise = (async () => {
     try {
       const { data } = await axios.post<{ access_token: string }>(
-        `${BASE_URLS.VITE_AUTH_URL}/api/auth/refresh`,
+        `${BASE_URLS.auth}/api/auth/refresh`,
         { refresh_token: refreshToken },
       );
       useAuthStore.getState().setAccessToken(data.access_token);
@@ -71,7 +71,27 @@ function requestId(): string {
     : `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function createClient(baseURL: string): AxiosInstance {
+/**
+ * A lightweight proxy axios instance that always throws a clear "service not configured"
+ * error so calling code fails fast with a helpful message instead of making garbage requests.
+ */
+function createUnavailableClient(service: ServiceKey): AxiosInstance {
+  const client = axios.create({ baseURL: '' });
+  client.interceptors.request.use(() => {
+    const err = new Error(
+      `${service} service is not configured. Set VITE_${service.toUpperCase()}_URL or use the Service Settings page.`,
+    );
+    (err as Error & { code?: string }).code = 'SERVICE_UNAVAILABLE';
+    return Promise.reject(err);
+  });
+  return client;
+}
+
+function createClient(service: ServiceKey): AxiosInstance {
+  if (!isServiceConfigured(service)) {
+    return createUnavailableClient(service);
+  }
+  const baseURL = BASE_URLS[service];
   const client = axios.create({
     baseURL,
     headers: { 'Content-Type': 'application/json' },
@@ -121,9 +141,9 @@ function createClient(baseURL: string): AxiosInstance {
   return client;
 }
 
-export const authClient = createClient(BASE_URLS.VITE_AUTH_URL);
-export const earningsClient = createClient(BASE_URLS.VITE_EARNINGS_URL);
-export const anomalyClient = createClient(BASE_URLS.VITE_ANOMALY_URL);
-export const grievanceClient = createClient(BASE_URLS.VITE_GRIEVANCE_URL);
-export const analyticsClient = createClient(BASE_URLS.VITE_ANALYTICS_URL);
-export const certificateClient = createClient(BASE_URLS.VITE_CERTIFICATE_URL);
+export const authClient = createClient('auth');
+export const earningsClient = createClient('earnings');
+export const anomalyClient = createClient('anomaly');
+export const grievanceClient = createClient('grievance');
+export const analyticsClient = createClient('analytics');
+export const certificateClient = createClient('certificate');

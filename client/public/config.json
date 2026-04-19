@@ -1,0 +1,12 @@
+{
+  "_comment": "Fallback runtime config. /api/config (built from Vercel env vars) takes priority when available. Edit only if you are not using /api/config.",
+  "source": "static",
+  "services": {
+    "auth": "https://fairgig-nu.vercel.app",
+    "earnings": "",
+    "anomaly": "https://fairgig-delta.vercel.app",
+    "grievance": "https://fairgig-grievances.vercel.app",
+    "analytics": "https://fairgig-analytics.vercel.app",
+    "certificate": ""
+  }
+}
