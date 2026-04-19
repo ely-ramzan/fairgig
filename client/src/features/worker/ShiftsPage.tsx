@@ -49,14 +49,22 @@ export function ShiftsPage() {
     <>
       <AppNav />
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
           <SerialHeader serial="02 —" label="Shift Log" />
-          <Link
-            to="/shifts/new"
-            className="font-mono text-[10px] tracking-widest uppercase px-3 py-1.5 rounded border border-amber text-amber hover:bg-amber-bg transition-colors"
-          >
-            + Log Shift
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/shifts/import"
+              className="font-mono text-[10px] tracking-widest uppercase px-3 py-1.5 rounded border border-border text-t2 hover:text-t1 hover:border-t2 transition-colors"
+            >
+              ⇪ Import CSV / Excel
+            </Link>
+            <Link
+              to="/shifts/new"
+              className="font-mono text-[10px] tracking-widest uppercase px-3 py-1.5 rounded border border-amber text-amber hover:bg-amber-bg transition-colors"
+            >
+              + Log Shift
+            </Link>
+          </div>
         </div>
 
         <div className="mb-4 flex flex-wrap gap-3 items-end">
@@ -127,9 +135,14 @@ export function ShiftsPage() {
         ) : shifts.length === 0 && page === 1 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20 border border-border rounded-lg bg-surface">
             <p className="font-mono text-[10px] tracking-widest uppercase text-t4">No shifts logged yet</p>
-            <Link to="/shifts/new" className="font-mono text-[10px] tracking-widest uppercase text-amber border border-amber px-3 py-1.5 rounded hover:bg-amber-bg transition-colors">
-              Log your first shift →
-            </Link>
+            <div className="flex flex-wrap items-center gap-2 justify-center">
+              <Link to="/shifts/new" className="font-mono text-[10px] tracking-widest uppercase text-amber border border-amber px-3 py-1.5 rounded hover:bg-amber-bg transition-colors">
+                Log your first shift →
+              </Link>
+              <Link to="/shifts/import" className="font-mono text-[10px] tracking-widest uppercase text-t2 border border-border px-3 py-1.5 rounded hover:text-t1 hover:border-t2 transition-colors">
+                or import CSV / Excel
+              </Link>
+            </div>
           </div>
         ) : (
           <>

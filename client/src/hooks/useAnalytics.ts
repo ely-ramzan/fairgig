@@ -53,10 +53,20 @@ export function useIncomeDistribution() {
   });
 }
 
+/**
+ * `threshold` is accepted here as a percentage (0–100) to match the UI's
+ * slider, but the backend validator is `threshold: float = Query(0.20, ge=0, le=1)`.
+ * Converting here keeps callers ergonomic (30 for 30%) without trailing
+ * decimals scattered across the app.
+ */
 export function useVulnerabilityFlags(params?: { threshold?: number }) {
+  const wireParams =
+    params?.threshold != null
+      ? { threshold: Math.max(0, Math.min(1, params.threshold / 100)) }
+      : undefined;
   return useQuery({
     queryKey: ['analytics', 'vulnerability', params],
-    queryFn: () => analyticsApi.vulnerabilityFlags(params).then((r) => r.data),
+    queryFn: () => analyticsApi.vulnerabilityFlags(wireParams).then((r) => r.data),
     staleTime: 1000 * 60 * 5,
     select: (rows: VulnerabilityFlagRow[]) =>
       rows.map((r) => ({
