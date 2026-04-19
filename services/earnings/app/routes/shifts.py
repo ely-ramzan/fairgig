@@ -247,7 +247,17 @@ async def worker_summary(
     if user["role"] == "worker" and user["user_id"] != str(worker_id):
         raise HTTPException(403, "Cannot access another worker's summary")
 
-    aggregate_q = text("""
+    date_conditions = ""
+    params: dict = {"worker_id": str(worker_id)}
+
+    if date_from:
+        date_conditions += " AND shift_date >= :date_from"
+        params["date_from"] = date_from
+    if date_to:
+        date_conditions += " AND shift_date <= :date_to"
+        params["date_to"] = date_to
+
+    aggregate_q = text(f"""
         SELECT
             SUM(gross_earned)                                        AS total_gross,
             SUM(platform_deductions)                                 AS total_deductions,
@@ -258,33 +268,24 @@ async def worker_summary(
             AVG(platform_deductions / NULLIF(gross_earned, 0)) * 100 AS avg_commission_rate
         FROM shift_logs
         WHERE worker_id = :worker_id
-          AND (:date_from IS NULL OR shift_date >= :date_from)
-          AND (:date_to   IS NULL OR shift_date <= :date_to)
+        {date_conditions}
     """)
-    r = await db.execute(aggregate_q, {
-        "worker_id": str(worker_id),
-        "date_from": date_from,
-        "date_to": date_to,
-    })
-    row = r.fetchone()
 
-    platform_q = text("""
+    r = await db.execute(aggregate_q, params)
+    row = r.first()
+
+    platform_q = text(f"""
         SELECT p.name AS platform,
-               COUNT(*)                                                    AS shifts,
-               SUM(sl.net_received)                                        AS net,
-               ROUND(AVG(sl.platform_deductions / NULLIF(sl.gross_earned,0)) * 100, 2)
-                                                                           AS commission_pct
+            COUNT(*)                                                    AS shifts,
+            SUM(sl.net_received)                                        AS net,
+            ROUND(AVG(sl.platform_deductions / NULLIF(sl.gross_earned,0)) * 100, 2)
+                                                                        AS commission_pct
         FROM shift_logs sl JOIN platforms p ON sl.platform_id = p.id
         WHERE sl.worker_id = :worker_id
-          AND (:date_from IS NULL OR sl.shift_date >= :date_from)
-          AND (:date_to   IS NULL OR sl.shift_date <= :date_to)
+        {date_conditions.replace('shift_date', 'sl.shift_date')}
         GROUP BY p.name ORDER BY net DESC
     """)
-    pr = await db.execute(platform_q, {
-        "worker_id": str(worker_id),
-        "date_from": date_from,
-        "date_to": date_to,
-    })
+    pr = await db.execute(platform_q, params)
 
     return {
         "total_gross": float(row[0] or 0),
@@ -307,41 +308,41 @@ async def worker_trends(
     user: dict = Depends(get_current_user),
 ):
     if user["role"] == "worker" and user["user_id"] != str(worker_id):
-        raise HTTPException(403, "Cannot access another worker's trends")
+        raise HTTPException(403, "Cannot access another worker's trends")    
 
     params = {"worker_id": str(worker_id), "months": months}
 
     earnings_q = text("""
-        SELECT DATE_TRUNC('week', shift_date)                       AS week,
-               SUM(net_received)                                    AS net_income,
-               AVG(net_received / NULLIF(hours_worked, 0))          AS avg_hourly
+        SELECT DATE_TRUNC('week', shift_date)              AS week,
+            SUM(net_received)                            AS net_income,
+            AVG(net_received / NULLIF(hours_worked, 0))  AS avg_hourly
         FROM shift_logs
         WHERE worker_id = :worker_id
-          AND shift_date >= NOW() - MAKE_INTERVAL(months => :months)
+        AND shift_date >= NOW() - (:months * INTERVAL '1 month')
         GROUP BY week ORDER BY week
     """)
 
     commission_q = text("""
-        SELECT DATE_TRUNC('week', sl.shift_date)                    AS week,
-               p.name                                               AS platform_name,
-               AVG(sl.platform_deductions / NULLIF(sl.gross_earned, 0)) * 100
-                                                                    AS commission_rate
+        SELECT DATE_TRUNC('week', sl.shift_date)            AS week,
+            p.name                                        AS platform_name,
+            AVG(sl.platform_deductions / NULLIF(sl.gross_earned, 0)) * 100
+                                                            AS commission_rate
         FROM shift_logs sl JOIN platforms p ON sl.platform_id = p.id
         WHERE sl.worker_id = :worker_id
-          AND sl.shift_date >= NOW() - MAKE_INTERVAL(months => :months)
+        AND sl.shift_date >= NOW() - (:months * INTERVAL '1 month')
         GROUP BY week, p.name ORDER BY week, p.name
     """)
 
     median_q = text("""
         SELECT zes.week,
-               zes.platform_name,
-               zes.median_net                                       AS city_median,
-               zes.p25_net,
-               zes.p75_net
+            zes.platform_name,
+            zes.median_net    AS city_median,
+            zes.p25_net,
+            zes.p75_net
         FROM zone_earnings_summary zes
         JOIN users u ON u.city_zone_id = zes.city_zone_id
         WHERE u.id = :worker_id
-          AND zes.week >= NOW() - MAKE_INTERVAL(months => :months)
+        AND zes.week >= NOW() - (:months * INTERVAL '1 month')
         ORDER BY zes.week
     """)
 

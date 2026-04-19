@@ -69,19 +69,19 @@ A microservices backend for tracking earnings, detecting anomalies, managing gri
         type: "object",
         required: ["email", "password", "display_name", "role"],
         properties: {
-          email:        { type: "string", format: "email", example: "ali.hassan@example.com" },
+          email:        { type: "string", format: "email", example: "johnsonjoshua@example.org" },
           password:     { type: "string", minLength: 8, example: "Secure@123" },
           display_name: { type: "string", example: "Ali Hassan" },
           role:         { type: "string", enum: ["worker","verifier","advocate"], example: "worker" },
           phone:        { type: "string", example: "+923001234567" },
-          city_zone_id: { type: "string", format: "uuid", example: "550e8400-e29b-41d4-a716-446655440000", description: "Required when role = worker" }
+          city_zone_id: { type: "string", format: "uuid", example: "db8a41a9-a7fe-4345-bd63-2b5c804320b8", description: "Required when role = worker" }
         }
       },
       LoginRequest: {
         type: "object",
         required: ["email","password"],
         properties: {
-          email:    { type: "string", format: "email", example: "ali.hassan@example.com" },
+          email:    { type: "string", format: "email", example: "johnsonjoshua@example.org" },
           password: { type: "string", example: "Secure@123" }
         }
       },
@@ -408,15 +408,15 @@ A microservices backend for tracking earnings, detecting anomalies, managing gri
               examples: {
                 worker: {
                   summary: "Register as a worker",
-                  value: { email: "ali.hassan@example.com", password: "Secure@123", display_name: "Ali Hassan", role: "worker", phone: "+923001234567", city_zone_id: "550e8400-e29b-41d4-a716-446655440000" }
+                  value: { email: "johnsonjoshua@example.org", password: "Secure@123", display_name: "Ali Hassan", role: "worker", phone: "+923001234567", city_zone_id: "db8a41a9-a7fe-4345-bd63-2b5c804320b8" }
                 },
                 verifier: {
                   summary: "Register as a verifier",
-                  value: { email: "sara.verifier@example.com", password: "Verify@456", display_name: "Sara Khan", role: "verifier", phone: "+923009876543" }
+                  value: { email: "john10@example.org", password: "Secure@123", display_name: "Sara Khan", role: "verifier", phone: "+923009876543" }
                 },
                 advocate: {
                   summary: "Register as an advocate",
-                  value: { email: "hamza.advocate@example.com", password: "Advocate@789", display_name: "Hamza Malik", role: "advocate", phone: "+923331234567" }
+                  value: { email: "curtis54@example.com", password: "Secure@123", display_name: "Hamza Malik", role: "advocate", phone: "+923331234567" }
                 }
               }
             }
@@ -443,9 +443,9 @@ A microservices backend for tracking earnings, detecting anomalies, managing gri
             "application/json": {
               schema: { "$ref": "#/components/schemas/LoginRequest" },
               examples: {
-                worker:    { summary: "Worker login",    value: { email: "ali.hassan@example.com",    password: "Secure@123"   } },
-                verifier:  { summary: "Verifier login",  value: { email: "sara.verifier@example.com", password: "Verify@456"  } },
-                advocate:  { summary: "Advocate login",  value: { email: "hamza.advocate@example.com",password: "Advocate@789"} }
+                worker:    { summary: "Worker login",    value: { email: "johnsonjoshua@example.org",    password: "Secure@123"   } },
+                verifier:  { summary: "Verifier login",  value: { email: "john10@example.org", password: "Secure@123"  } },
+                advocate:  { summary: "Advocate login",  value: { email: "curtis54@example.com", password: "Secure@123" } }
               }
             }
           }
@@ -541,7 +541,7 @@ A microservices backend for tracking earnings, detecting anomalies, managing gri
               examples: {
                 careem: {
                   summary: "Careem shift — normal",
-                  value: { platform_id: "7e3f8c2a-1b4d-4e9f-a8c5-2d6e0f1a3b4c", shift_date: "2026-04-15", hours_worked: "7.5", gross_earned: "2625.00", platform_deductions: "393.75", net_received: "2231.25" }
+                  value: { platform_id: "2fd7e4fc-b7d9-4024-9e26-1163de54acc3", shift_date: "2026-04-15", hours_worked: "7.5", gross_earned: "2625.00", platform_deductions: "393.75", net_received: "2231.25" }
                 },
                 bykea: {
                   summary: "Bykea shift — short",
@@ -984,11 +984,11 @@ A microservices backend for tracking earnings, detecting anomalies, managing gri
               examples: {
                 commission: {
                   summary: "Commission change complaint",
-                  value: { platform_id: "7e3f8c2a-1b4d-4e9f-a8c5-2d6e0f1a3b4c", category: "commission_change", description: "Careem raised my commission from 20% to 28% overnight without any notification. This drastically reduced my take-home pay.", is_anonymous: true }
+                  value: { platform_id: "2fd7e4fc-b7d9-4024-9e26-1163de54acc3", category: "commission_change", description: "Careem raised my commission from 20% to 28% overnight without any notification. This drastically reduced my take-home pay.", is_anonymous: true }
                 },
                 deactivation: {
                   summary: "Sudden deactivation",
-                  value: { platform_id: "7e3f8c2a-1b4d-4e9f-a8c5-2d6e0f1a3b4c", category: "deactivation", description: "My account was deactivated without any warning or explanation. I have been driving for 3 years with 4.8 stars.", is_anonymous: false }
+                  value: { platform_id: "2fd7e4fc-b7d9-4024-9e26-1163de54acc3", category: "deactivation", description: "My account was deactivated without any warning or explanation. I have been driving for 3 years with 4.8 stars.", is_anonymous: false }
                 },
                 payment: {
                   summary: "Payment delay",
