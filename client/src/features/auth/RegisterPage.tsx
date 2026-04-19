@@ -10,7 +10,6 @@ const registerSchema = z.object({
   password:     z.string().min(8, 'Minimum 8 characters'),
   display_name: z.string().min(2, 'Name required'),
   role:         z.enum(['worker', 'verifier', 'advocate']),
-  phone:        z.string().optional(),
   city_zone_id: z.string().optional(),
 }).refine(
   (d) => d.role !== 'worker' || !!d.city_zone_id,
@@ -30,7 +29,7 @@ export function RegisterPage() {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
-    resolver:     zodResolver(registerSchema),
+    resolver:      zodResolver(registerSchema),
     defaultValues: { role: 'worker' },
   });
 
@@ -50,6 +49,7 @@ export function RegisterPage() {
           </Link>
         </div>
       )}
+
       <div className="mb-8 text-center">
         <div className="font-mono text-[11px] tracking-[0.3em] uppercase text-amber mb-2">FAIRGIG</div>
         <h1 className="font-serif text-3xl text-t1">Create account</h1>
@@ -73,51 +73,84 @@ export function RegisterPage() {
 
           {/* Display name */}
           <div className="flex flex-col gap-1">
-            <label className="font-mono text-[10px] tracking-widest uppercase text-t3">Display name</label>
-            <input {...register('display_name')} type="text" placeholder="Ali Hassan"
-              className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 placeholder:text-t4 focus:outline-none focus:border-amber" />
-            {errors.display_name && <span className="font-mono text-[10px] text-rust">{errors.display_name.message}</span>}
+            <label className="font-mono text-[10px] tracking-widest uppercase text-t3">
+              Display name <span className="text-rust">*</span>
+            </label>
+            <input
+              {...register('display_name')}
+              type="text"
+              placeholder="Ali Hassan"
+              className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 placeholder:text-t4 focus:outline-none focus:border-amber"
+            />
+            {errors.display_name && (
+              <span className="font-mono text-[10px] text-rust">{errors.display_name.message}</span>
+            )}
           </div>
 
           {/* Email */}
           <div className="flex flex-col gap-1">
-            <label className="font-mono text-[10px] tracking-widest uppercase text-t3">Email</label>
-            <input {...register('email')} type="email" placeholder="you@example.com"
-              className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 placeholder:text-t4 focus:outline-none focus:border-amber" />
-            {errors.email && <span className="font-mono text-[10px] text-rust">{errors.email.message}</span>}
+            <label className="font-mono text-[10px] tracking-widest uppercase text-t3">
+              Email <span className="text-rust">*</span>
+            </label>
+            <input
+              {...register('email')}
+              type="email"
+              placeholder="you@example.com"
+              className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 placeholder:text-t4 focus:outline-none focus:border-amber"
+            />
+            {errors.email && (
+              <span className="font-mono text-[10px] text-rust">{errors.email.message}</span>
+            )}
           </div>
 
           {/* Password */}
           <div className="flex flex-col gap-1">
-            <label className="font-mono text-[10px] tracking-widest uppercase text-t3">Password</label>
-            <input {...register('password')} type="password" placeholder="Min. 8 characters"
-              className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 placeholder:text-t4 focus:outline-none focus:border-amber" />
-            {errors.password && <span className="font-mono text-[10px] text-rust">{errors.password.message}</span>}
+            <label className="font-mono text-[10px] tracking-widest uppercase text-t3">
+              Password <span className="text-rust">*</span>
+            </label>
+            <input
+              {...register('password')}
+              type="password"
+              placeholder="Min. 8 characters"
+              className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 placeholder:text-t4 focus:outline-none focus:border-amber"
+            />
+            {errors.password && (
+              <span className="font-mono text-[10px] text-rust">{errors.password.message}</span>
+            )}
           </div>
 
-          {/* City zone — only for workers */}
+          {/* City zone — workers only */}
           {role === 'worker' && (
             <div className="flex flex-col gap-1">
-              <label className="font-mono text-[10px] tracking-widest uppercase text-t3">City Zone</label>
-              <select {...register('city_zone_id')}
-                className="fg-select-compatible bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber">
+              <label className="font-mono text-[10px] tracking-widest uppercase text-t3">
+                City Zone <span className="text-rust">*</span>
+              </label>
+              <select
+                {...register('city_zone_id')}
+                className="fg-select-compatible bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber"
+              >
                 <option value="">Select zone…</option>
                 {zones?.map((z) => (
                   <option key={z.id} value={z.id}>{z.name}</option>
                 ))}
               </select>
-              {errors.city_zone_id && <span className="font-mono text-[10px] text-rust">{errors.city_zone_id.message}</span>}
+              {errors.city_zone_id && (
+                <span className="font-mono text-[10px] text-rust">{errors.city_zone_id.message}</span>
+              )}
             </div>
           )}
 
           {register_mut.isError && (
             <div className="font-mono text-[10px] text-rust text-center">
-              Registration failed. Email may already be in use.
+              Registration failed — email may already be in use.
             </div>
           )}
 
-          <button type="submit" disabled={isSubmitting || register_mut.isPending}
-            className="mt-2 bg-amber text-bg font-mono text-[11px] tracking-widest uppercase py-2.5 rounded hover:opacity-90 disabled:opacity-40 transition-opacity">
+          <button
+            type="submit"
+            disabled={isSubmitting || register_mut.isPending}
+            className="mt-2 bg-amber text-bg font-mono text-[11px] tracking-widest uppercase py-2.5 rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
+          >
             {register_mut.isPending ? 'Creating…' : 'Create account'}
           </button>
         </form>
