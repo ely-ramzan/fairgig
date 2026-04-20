@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { isAxiosError }     from 'axios';
 import { AppNav }            from '../../components/shared/AppNav';
 import { SerialHeader }      from '../../components/shared/SerialHeader';
