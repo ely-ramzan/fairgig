@@ -172,8 +172,21 @@ export function VerificationQueuePage() {
           </div>
 
           {submitVerification.isError && (
-            <div className="font-mono text-[10px] text-rust">
-              Verification failed — please try again.
+            <div className="font-mono text-[10px] text-rust bg-rust/10 border border-rust/30 rounded px-3 py-2">
+              {(() => {
+                const e = submitVerification.error as unknown;
+                if (isAxiosError(e)) {
+                  const resp = e.response;
+                  if (!resp) {
+                    return `Network error — ${e.message}. Check that the earnings service is up.`;
+                  }
+                  const data = resp.data as { detail?: string; message?: string; type?: string } | undefined;
+                  const body = data?.detail || data?.message;
+                  const kind = data?.type ? ` (${data.type})` : '';
+                  return `Server returned ${resp.status}${kind}${body ? ` — ${body}` : ''}`;
+                }
+                return 'Verification failed — please try again.';
+              })()}
             </div>
           )}
 

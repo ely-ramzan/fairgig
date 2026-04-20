@@ -1,4 +1,7 @@
-from fastapi import FastAPI, Request, status
+import logging
+import traceback
+
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,7 +13,16 @@ from app.routes.vulnerability import router as vulnerability_router
 from app.routes.comparison import router as comparison_router
 from app.routes.dashboard import router as dashboard_router
 
+logger = logging.getLogger("analytics")
+logging.basicConfig(level=logging.INFO)
+
 app = FastAPI(title="FairGig Analytics Service", version="1.0.0")
+
+_CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "*",
+    "Access-Control-Allow-Headers": "*",
+}
 
 
 def _fmt_errors(errors: list) -> list[dict]:
@@ -28,6 +40,7 @@ async def _validation_handler(request: Request, exc: RequestValidationError) -> 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"error": "validation_error", "message": "Request validation failed", "details": _fmt_errors(exc.errors())},
+        headers=_CORS_HEADERS,
     )
 
 
@@ -36,15 +49,39 @@ async def _pydantic_handler(request: Request, exc: ValidationError) -> JSONRespo
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"error": "validation_error", "message": "Data validation failed", "details": _fmt_errors(exc.errors())},
+        headers=_CORS_HEADERS,
+    )
+
+
+@app.exception_handler(HTTPException)
+async def _http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    headers = {**(exc.headers or {}), **_CORS_HEADERS}
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=headers,
     )
 
 
 @app.exception_handler(Exception)
 async def _generic_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.error(
+        "Unhandled error on %s %s: %s\n%s",
+        request.method,
+        request.url.path,
+        exc,
+        traceback.format_exc(),
+    )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"error": "internal_server_error", "message": "An unexpected error occurred", "details": []},
+        content={
+            "error": "internal_server_error",
+            "message": str(exc) or "An unexpected error occurred",
+            "type": type(exc).__name__,
+        },
+        headers=_CORS_HEADERS,
     )
+
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,4 +1,5 @@
-// Displays a single screenshot for verifier review.
+import { useEffect, useState } from 'react';
+
 interface ScreenshotReviewProps {
   cloudinaryUrl: string;
   workerName:    string;
@@ -6,6 +7,31 @@ interface ScreenshotReviewProps {
 }
 
 export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: ScreenshotReviewProps) {
+  const [broken, setBroken] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    setBroken(false);
+    setModalOpen(false);
+  }, [cloudinaryUrl]);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setModalOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [modalOpen]);
+
+  const openModal = () => {
+    if (!broken) setModalOpen(true);
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -13,23 +39,80 @@ export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: Scree
           <div className="font-sans text-sm text-t1">{workerName}</div>
           <div className="font-mono text-[10px] text-t3">{shiftDate}</div>
         </div>
-        <a
-          href={cloudinaryUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-mono text-[10px] tracking-widest uppercase text-amber hover:underline"
+        <button
+          type="button"
+          onClick={openModal}
+          disabled={broken}
+          className="font-mono text-[10px] tracking-widest uppercase text-amber hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Full size ↗
-        </a>
+        </button>
       </div>
+
       <div className="rounded-lg overflow-hidden border border-border bg-elevated">
-        <img
-          src={cloudinaryUrl}
-          alt={`Earnings screenshot — ${workerName}`}
-          className="w-full object-contain max-h-96"
-          loading="lazy"
-        />
+        {broken ? (
+          <div className="h-40 flex flex-col items-center justify-center gap-2 font-mono text-[10px] text-t4 text-center px-4">
+            <span className="text-t3">Screenshot could not be loaded</span>
+            <span className="text-[9px]">The file may have been deleted or the link is stale. Consider marking this shift unverifiable.</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={openModal}
+            className="block w-full cursor-zoom-in"
+            title="Click to enlarge"
+          >
+            <img
+              src={cloudinaryUrl}
+              alt={`Earnings screenshot — ${workerName}`}
+              className="w-full object-contain max-h-96"
+              loading="lazy"
+              onError={() => setBroken(true)}
+            />
+          </button>
+        )}
       </div>
+
+      {modalOpen && !broken && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Screenshot preview"
+          onClick={() => setModalOpen(false)}
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalOpen(false);
+            }}
+            aria-label="Close"
+            className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white font-mono text-lg transition-colors"
+          >
+            ×
+          </button>
+
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-5xl max-h-full flex flex-col gap-3"
+          >
+            <div className="flex items-baseline justify-between text-white font-mono text-[11px] tracking-widest uppercase">
+              <span>{workerName}</span>
+              <span className="text-white/60">{shiftDate}</span>
+            </div>
+            <img
+              src={cloudinaryUrl}
+              alt={`Earnings screenshot — ${workerName}`}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg bg-white"
+              onError={() => {
+                setBroken(true);
+                setModalOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -47,6 +47,16 @@ fake = Faker()
 random.seed(42)
 Faker.seed(42)
 
+# ── Volume caps (change these to scale up/down) ────────────────────────────────
+SEED_WORKERS    = 20    # number of worker accounts
+SEED_VERIFIERS  = 3     # number of verifier accounts
+SEED_ADVOCATES  = 2     # number of advocate accounts
+SEED_SHIFTS     = 100   # max shift_logs rows
+SEED_SCREENSHOTS= 60    # max screenshots rows
+SEED_VERIFS     = 40    # max verifications rows
+SEED_GRIEVANCES = 20    # max grievances rows
+SEED_ANOMALIES  = 15    # max anomaly_results rows
+
 DEFAULT_PASSWORD = "Secure@123"
 _hashed_default = bcrypt.hashpw(DEFAULT_PASSWORD.encode(), bcrypt.gensalt(rounds=12)).decode()
 
@@ -217,16 +227,16 @@ def seed_users(session: Session, zones: list[dict]) -> tuple[list[dict], list[di
         }
 
     workers: list[dict] = []
-    for _ in range(210):
+    for _ in range(SEED_WORKERS):
         zone_id = random.choice(zone_ids)
         workers.append(make_user("worker", zone_id))
 
     verifiers: list[dict] = []
-    for _ in range(10):
+    for _ in range(SEED_VERIFIERS):
         verifiers.append(make_user("verifier"))
 
     advocates: list[dict] = []
-    for _ in range(5):
+    for _ in range(SEED_ADVOCATES):
         advocates.append(make_user("advocate"))
 
     all_users = workers + verifiers + advocates
@@ -392,10 +402,13 @@ def seed_shift_logs(
                 "created_at": datetime.combine(d, datetime.min.time()),
             })
 
-    # Batch insert in chunks of 500
+    # Cap total shifts
+    if len(shifts) > SEED_SHIFTS:
+        shifts = random.sample(shifts, SEED_SHIFTS)
+    # Batch insert in chunks of 50
     total = len(shifts)
-    for i in range(0, total, 500):
-        chunk = shifts[i : i + 500]
+    for i in range(0, total, 50):
+        chunk = shifts[i : i + 50]
         session.execute(
             text(
                 "INSERT INTO shift_logs "
@@ -422,7 +435,7 @@ def seed_screenshots(session: Session, shifts: list[dict]) -> list[dict]:
     # pipeline has enough eligible shifts to produce ~4,000 verified records,
     # which gives the zone_earnings_summary view enough data per cell to satisfy
     # the HAVING COUNT(DISTINCT worker_id) >= 5 k-anonymity threshold.
-    sample_shifts = random.sample(shifts, min(5500, int(len(shifts) * 0.65)))
+    sample_shifts = random.sample(shifts, min(SEED_SCREENSHOTS, len(shifts)))
     screenshots: list[dict] = []
 
     for shift in sample_shifts:
@@ -445,8 +458,8 @@ def seed_screenshots(session: Session, shifts: list[dict]) -> list[dict]:
         }
         screenshots.append(row)
 
-    for i in range(0, len(screenshots), 500):
-        chunk = screenshots[i : i + 500]
+    for i in range(0, len(screenshots), 50):
+        chunk = screenshots[i : i + 50]
         session.execute(
             text(
                 "INSERT INTO screenshots "
@@ -482,8 +495,8 @@ def seed_verifications(
     screenshot_shift_ids = {s["shift_log_id"] for s in screenshots}
     eligible_shifts = [s for s in shifts if s["id"] in screenshot_shift_ids]
 
-    # Sample up to 5,000 eligible shifts
-    sample_size = min(5000, len(eligible_shifts))
+    # Sample up to SEED_VERIFS eligible shifts
+    sample_size = min(SEED_VERIFS, len(eligible_shifts))
     sample_shifts = random.sample(eligible_shifts, sample_size)
 
     # 60% confirmed, 10% disputed, 30% unverifiable
@@ -555,8 +568,8 @@ def seed_verifications(
             {"status": new_status, "id": shift_id},
         )
 
-    for i in range(0, len(verifications), 500):
-        chunk = verifications[i : i + 500]
+    for i in range(0, len(verifications), 50):
+        chunk = verifications[i : i + 50]
         session.execute(
             text(
                 "INSERT INTO verifications "
@@ -567,7 +580,7 @@ def seed_verifications(
             ),
             chunk,
         )
-    session.commit()
+        session.commit()
     print(f"✓  ({len(verifications):,} verifications)")
 
 
@@ -607,9 +620,10 @@ def seed_grievances(
 
     grievances: list[dict] = []
 
-    # Cluster: 12 Careem commission_change grievances in week 8 (Feb 17-23, 2026)
+    # Cluster: commission_change grievances in week 8 (cap to half of SEED_GRIEVANCES)
+    cluster_size = min(12, max(3, SEED_GRIEVANCES // 2), len(workers))
     cluster_week_start = date(2026, 2, 16)
-    cluster_workers = random.sample(workers, 12)
+    cluster_workers = random.sample(workers, cluster_size)
     for i, w in enumerate(cluster_workers):
         created = datetime.combine(
             cluster_week_start + timedelta(days=random.randint(0, 6)),
@@ -659,7 +673,8 @@ def seed_grievances(
     }
 
     remaining_workers = [w for w in workers if w not in cluster_workers]
-    for _ in range(55):
+    other_count = max(0, SEED_GRIEVANCES - cluster_size)
+    for _ in range(other_count):
         w = random.choice(remaining_workers)
         platform = random.choice(platforms)
         category = random.choice(CATEGORIES)
@@ -763,7 +778,7 @@ def seed_anomaly_results(
     anomalies: list[dict] = []
 
     # Rate spike anomalies from Careem week 8
-    sample_spikes = random.sample(week8_careem, min(20, len(week8_careem)))
+    sample_spikes = random.sample(week8_careem, min(max(1, SEED_ANOMALIES // 2), len(week8_careem)))
     for shift in sample_spikes:
         actual_rate = float(shift["platform_deductions"]) / float(shift["gross_earned"]) * 100
         row = {
@@ -789,7 +804,7 @@ def seed_anomaly_results(
     # MoM income drop anomalies — find shifts from workers with drops
     all_worker_ids = {s["worker_id"] for s in shifts}
     # Simulate 5 workers with income drops
-    drop_worker_ids = random.sample(list(all_worker_ids), 5)
+    drop_worker_ids = random.sample(list(all_worker_ids), min(5, len(all_worker_ids)))
     for wid in drop_worker_ids:
         row = {
             "id": pk(),
@@ -857,8 +872,8 @@ def seed_anomaly_results(
         }
         anomalies.append(row)
 
-    for i in range(0, len(anomalies), 200):
-        chunk = anomalies[i : i + 200]
+    for i in range(0, len(anomalies), 50):
+        chunk = anomalies[i : i + 50]
         session.execute(
             text(
                 "INSERT INTO anomaly_results "
@@ -870,7 +885,7 @@ def seed_anomaly_results(
             ),
             chunk,
         )
-    session.commit()
+        session.commit()
     print(f"✓  ({len(anomalies)} anomaly results)")
 
 
