@@ -13,7 +13,7 @@ export function ImportResultCard({ result }: ImportResultCardProps) {
       {result.errors?.length > 0 && (
         <details className="text-t2">
           <summary className="cursor-pointer text-rust">Error details</summary>
-          <pre className="mt-2 whitespace-pre-wrap break-words text-[9px]">{JSON.stringify(result.errors, null, 2)}</pre>
+          <pre className="mt-2 whitespace-pre-wrap wrap-break-word text-[9px]">{JSON.stringify(result.errors, null, 2)}</pre>
         </details>
       )}
     </div>

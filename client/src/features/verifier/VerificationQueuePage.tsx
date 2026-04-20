@@ -1,11 +1,10 @@
-import { useState }         from 'react';
+import { useEffect, useState } from 'react';
 import { isAxiosError }     from 'axios';
 import { AppNav }            from '../../components/shared/AppNav';
 import { SerialHeader }      from '../../components/shared/SerialHeader';
 import { ErrorState }        from '../../components/shared/ErrorState';
 import { VerificationForm }  from './components/VerificationForm';
 import { ScreenshotReview }  from './components/ScreenshotReview';
-import { ScreenshotUploadButton } from '../worker/components/ScreenshotUploadButton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { earningsApi }       from '../../api/earnings';
 import type { VerificationPayload } from '../../types/api';
@@ -24,11 +23,21 @@ export function VerificationQueuePage() {
       earningsApi.submitVerification(shiftId, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['verification-queue'] });
-      setCurrent((c) => c + 1);
     },
   });
 
-  const shift = queue?.items?.[current];
+  const shifts = queue?.items ?? [];
+
+  // Clamp current index whenever the queue shrinks (e.g. after a verdict).
+  useEffect(() => {
+    if (shifts.length === 0) {
+      if (current !== 0) setCurrent(0);
+    } else if (current >= shifts.length) {
+      setCurrent(shifts.length - 1);
+    }
+  }, [shifts.length, current]);
+
+  const shift = shifts[Math.min(current, shifts.length - 1)];
   const { data: screenshotMeta, isFetching: shotLoading } = useQuery({
     queryKey: ['shift-screenshot', shift?.id],
     queryFn: async () => {
@@ -71,7 +80,7 @@ export function VerificationQueuePage() {
     );
   }
 
-  const shifts = queue?.items ?? [];
+  const pendingCount = queue?.total ?? shifts.length;
 
   if (!shift) {
     return (
@@ -95,9 +104,28 @@ export function VerificationQueuePage() {
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <SerialHeader serial="03 —" label="Verification Queue" />
-          <span className="font-mono text-[10px] text-t3">
-            {current + 1} / {shifts.length}
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={current === 0}
+              onClick={() => setCurrent((c) => Math.max(0, c - 1))}
+              className="font-mono text-[10px] uppercase tracking-widest px-2 py-1 border border-border rounded-sm text-t2 hover:text-t1 disabled:opacity-30 transition-colors"
+            >
+              ← Prev
+            </button>
+            <span className="font-mono text-[10px] text-t3">
+              {current + 1} / {shifts.length}
+              <span className="text-t4"> · {pendingCount} pending</span>
+            </span>
+            <button
+              type="button"
+              disabled={current >= shifts.length - 1}
+              onClick={() => setCurrent((c) => Math.min(shifts.length - 1, c + 1))}
+              className="font-mono text-[10px] uppercase tracking-widest px-2 py-1 border border-border rounded-sm text-t2 hover:text-t1 disabled:opacity-30 transition-colors"
+            >
+              Next →
+            </button>
+          </div>
         </div>
 
         <div className="bg-surface border border-border rounded-lg p-6 flex flex-col gap-6">
@@ -130,7 +158,7 @@ export function VerificationQueuePage() {
             </div>
           </div>
 
-          {/* Screenshot review + upload */}
+          {/* Screenshot review (read-only — only the worker can upload) */}
           <div className="flex flex-col gap-3 border-t border-border pt-4">
             <div className="font-mono text-[9px] tracking-widest uppercase text-t4">
               Shift screenshot
@@ -144,14 +172,10 @@ export function VerificationQueuePage() {
                 shiftDate={shift.shift_date}
               />
             ) : (
-              <p className="font-mono text-[10px] text-t4">No screenshot uploaded yet.</p>
+              <p className="font-mono text-[10px] text-t4">
+                No screenshot uploaded — consider marking this shift <span className="text-t2">unverifiable</span>.
+              </p>
             )}
-            <div className="flex items-center gap-3">
-              <ScreenshotUploadButton shiftId={shift.id} />
-              <span className="font-sans text-xs text-t3">
-                Upload or replace the earnings screenshot as evidence before verifying.
-              </span>
-            </div>
           </div>
 
           {submitVerification.isError && (

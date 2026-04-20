@@ -1,3 +1,4 @@
+import { useState }        from 'react';
 import { AppNav }          from '../../components/shared/AppNav';
 import { KpiCard }          from '../../components/shared/KpiCard';
 import { SerialHeader }     from '../../components/shared/SerialHeader';
@@ -46,6 +47,8 @@ export function DashboardPage() {
   const { data: recentPage } = useShifts({ page: 1, limit: 10 });
   const { data: anomalies }  = useAnomalies(wid);
 
+  const [showAllAnomalies, setShowAllAnomalies] = useState(false);
+
   if (sumPending) return <DashboardSkeleton />;
 
   if (sumError) {
@@ -62,7 +65,10 @@ export function DashboardPage() {
   const recentShifts  = recentPage?.items ?? [];
   const trendData     = trends ? fromWorkerEarningsTrend(trends.earnings_trend) : [];
   const lastWeekNet   = trends?.earnings_trend?.at(-1)?.net_income;
-  const highAnomalies = (anomalies ?? []).filter((a) => a.severity === 'high');
+  const allAnomalies  = anomalies ?? [];
+  const highAnomalies = allAnomalies.filter((a) => a.severity === 'high');
+  const topHighIds    = new Set(highAnomalies.slice(0, 3).map((a) => a.id));
+  const remainingAnomalies = allAnomalies.filter((a) => !topHighIds.has(a.id));
 
   return (
     <>
@@ -90,7 +96,7 @@ export function DashboardPage() {
           </button>
         </div>
 
-        {highAnomalies.length > 0 && (
+        {(highAnomalies.length > 0 || remainingAnomalies.length > 0) && (
           <div className="flex flex-col gap-2 mb-6">
             {highAnomalies.slice(0, 3).map((a) => (
               <AnomalyCallout
@@ -100,10 +106,44 @@ export function DashboardPage() {
                 severity={a.severity}
               />
             ))}
-            {highAnomalies.length > 3 && (
-              <p className="font-mono text-[10px] text-t3 pl-1">
-                +{highAnomalies.length - 3} more anomalies detected
-              </p>
+
+            {remainingAnomalies.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllAnomalies((v) => !v)}
+                className="self-start font-mono text-[10px] tracking-widest uppercase text-amber hover:text-amber-bright px-1 py-1 transition-colors"
+              >
+                {showAllAnomalies
+                  ? '− Hide additional anomalies'
+                  : `+ View ${remainingAnomalies.length} more ${remainingAnomalies.length === 1 ? 'anomaly' : 'anomalies'}`}
+              </button>
+            )}
+
+            {showAllAnomalies && remainingAnomalies.length > 0 && (
+              <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+                {remainingAnomalies.map((a) => (
+                  <div key={a.id} className="px-4 py-3 flex items-start gap-3">
+                    <span
+                      className={
+                        'font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 rounded border shrink-0 ' +
+                        (a.severity === 'high'
+                          ? 'border-rust text-rust'
+                          : a.severity === 'medium'
+                            ? 'border-amber text-amber'
+                            : 'border-border text-t3')
+                      }
+                    >
+                      {a.severity}
+                    </span>
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-t2">
+                        {a.anomaly_type.replace(/_/g, ' ')}
+                      </span>
+                      <span className="font-sans text-sm text-t1">{a.explanation}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

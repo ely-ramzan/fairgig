@@ -60,7 +60,7 @@ router.get("/", authenticate, async (req, res, next) => {
         if (platform_id) where.platform_id = platform_id;
         if (category) where.category = category;
         if (status) where.status = status;
-        if (tag) where.grievance_tags = { some: { tag } };
+        if (tag) where.grievance_tags = { some: { tag: { contains: tag, mode: "insensitive" } } };
 
         const [grievances, total] = await Promise.all([
             prisma.grievances.findMany({

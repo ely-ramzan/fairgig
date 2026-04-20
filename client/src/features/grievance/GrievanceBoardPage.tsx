@@ -1,4 +1,4 @@
-import { useState }         from 'react';
+import { useEffect, useState } from 'react';
 import { AppNav }            from '../../components/shared/AppNav';
 import { SerialHeader }      from '../../components/shared/SerialHeader';
 import { SectionDivider }    from '../../components/shared/SectionDivider';
@@ -37,6 +37,12 @@ export function GrievanceBoardPage() {
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
   const [tag, setTag] = useState('');
+  const [debouncedTag, setDebouncedTag] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedTag(tag.trim()), 350);
+    return () => clearTimeout(t);
+  }, [tag]);
 
   const { data: platforms = [] } = usePlatforms();
 
@@ -46,7 +52,7 @@ export function GrievanceBoardPage() {
     platform_id: platformId || undefined,
     category: category || undefined,
     status: status || undefined,
-    tag: tag.trim() || undefined,
+    tag: debouncedTag || undefined,
   });
   const items      = data?.items ?? [];
   const totalPages = data?.total_pages ?? 1;
@@ -56,6 +62,7 @@ export function GrievanceBoardPage() {
     setCategory('');
     setStatus('');
     setTag('');
+    setDebouncedTag('');
     setPage(1);
   };
 

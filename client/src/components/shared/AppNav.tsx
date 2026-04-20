@@ -76,14 +76,6 @@ export function AppNav() {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
-          <Link
-            to="/settings/services"
-            title="Service settings"
-            className="hidden sm:inline font-mono text-[9px] tracking-widest uppercase text-t3 hover:text-amber transition-colors px-2 py-1 rounded"
-          >
-            Services
-          </Link>
-
           {/* Theme toggle */}
           <button
             onClick={toggle}
