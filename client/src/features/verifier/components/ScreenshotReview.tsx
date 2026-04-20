@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ScreenshotReviewProps {
   cloudinaryUrl: string;
@@ -9,11 +9,12 @@ interface ScreenshotReviewProps {
 export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: ScreenshotReviewProps) {
   const [broken, setBroken] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-
-  useEffect(() => {
+  const prevUrlRef = useRef(cloudinaryUrl);
+  if (prevUrlRef.current !== cloudinaryUrl) {
+    prevUrlRef.current = cloudinaryUrl;
     setBroken(false);
     setModalOpen(false);
-  }, [cloudinaryUrl]);
+  }
 
   useEffect(() => {
     if (!modalOpen) return;
