@@ -1,4 +1,4 @@
-import { useForm }         from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver }     from '@hookform/resolvers/zod';
 import { z }               from 'zod';
 import type { VerificationPayload } from '../../../types/api';
@@ -24,11 +24,11 @@ export function VerificationForm({ onSubmit, isPending }: VerificationFormProps)
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(verificationSchema), defaultValues: { status: 'verified' } });
 
-  const status = watch('status');
+  const status = useWatch({ control, name: 'status' });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">

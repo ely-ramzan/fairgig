@@ -28,16 +28,9 @@ export function VerificationQueuePage() {
 
   const shifts = queue?.items ?? [];
 
-  // Clamp current index whenever the queue shrinks (e.g. after a verdict).
-  useEffect(() => {
-    if (shifts.length === 0) {
-      if (current !== 0) setCurrent(0);
-    } else if (current >= shifts.length) {
-      setCurrent(shifts.length - 1);
-    }
-  }, [shifts.length, current]);
-
-  const shift = shifts[Math.min(current, shifts.length - 1)];
+  // Clamp on read — no effect needed, avoids cascading renders.
+  const safeCurrent = shifts.length === 0 ? 0 : Math.min(current, shifts.length - 1);
+  const shift = shifts[safeCurrent];
   const { data: screenshotMeta, isFetching: shotLoading } = useQuery({
     queryKey: ['shift-screenshot', shift?.id],
     queryFn: async () => {

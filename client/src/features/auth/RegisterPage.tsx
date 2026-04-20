@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -47,7 +47,7 @@ export function RegisterPage() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
@@ -60,7 +60,7 @@ export function RegisterPage() {
     setValue('role', initialRole, { shouldValidate: false, shouldDirty: false });
   }, [initialRole, setValue]);
 
-  const role = watch('role');
+  const role = useWatch({ control, name: 'role' });
 
   const submitErrorMessage = register_mut.isError
     ? classifyAxiosError(register_mut.error).message
