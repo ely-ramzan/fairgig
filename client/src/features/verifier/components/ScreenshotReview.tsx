@@ -51,27 +51,25 @@ export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: Scree
         </button>
       </div>
 
-      <div className="rounded-lg overflow-hidden border border-border bg-elevated">
+      <div className="rounded-lg border border-border bg-elevated">
         {broken ? (
-          <div className="h-40 flex flex-col items-center justify-center gap-2 font-mono text-[10px] text-t4 text-center px-4">
+          <div className="h-20 flex flex-col items-center justify-center gap-1 font-mono text-[10px] text-t4 text-center px-4">
             <span className="text-t3">Screenshot could not be loaded</span>
-            <span className="text-[9px]">The file may have been deleted or the link is stale. Consider marking this shift unverifiable.</span>
+            <span className="text-[9px]">Consider marking this shift unverifiable.</span>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={openModal}
-            className="block w-full cursor-zoom-in"
-            title="Click to enlarge"
-          >
-            <img
-              src={cloudinaryUrl}
-              alt={`Earnings screenshot — ${workerName}`}
-              className="w-full object-contain max-h-96"
-              loading="lazy"
-              onError={() => setBroken(true)}
-            />
-          </button>
+          <div className="h-20 flex items-center justify-center font-mono text-[10px] tracking-widest uppercase text-t4">
+            Screenshot available — use Full size ↗
+          </div>
+        )}
+        {/* hidden img to detect broken links */}
+        {!broken && (
+          <img
+            src={cloudinaryUrl}
+            alt=""
+            className="hidden"
+            onError={() => setBroken(true)}
+          />
         )}
       </div>
 
