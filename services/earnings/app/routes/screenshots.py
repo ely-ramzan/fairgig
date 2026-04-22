@@ -47,6 +47,7 @@ async def upload_shift_screenshot(
     old = existing.scalar_one_or_none()
     if old:
         await db.delete(old)
+        await db.flush()
 
     screenshot = Screenshot(
         id=uuid.uuid4(),

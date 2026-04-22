@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ScreenshotReviewProps {
   cloudinaryUrl: string;
@@ -7,11 +7,12 @@ interface ScreenshotReviewProps {
 }
 
 export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: ScreenshotReviewProps) {
+  const [trackedUrl, setTrackedUrl] = useState(cloudinaryUrl);
   const [broken, setBroken] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const prevUrlRef = useRef(cloudinaryUrl);
-  if (prevUrlRef.current !== cloudinaryUrl) {
-    prevUrlRef.current = cloudinaryUrl;
+
+  if (cloudinaryUrl !== trackedUrl) {
+    setTrackedUrl(cloudinaryUrl);
     setBroken(false);
     setModalOpen(false);
   }
