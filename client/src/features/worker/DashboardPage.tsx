@@ -41,7 +41,7 @@ export function DashboardPage() {
   const wid  = user?.id ?? '';
   const { toast } = useToast();
   const analyzeWorker = useAnalyzeWorker();
-  const [analyzeDisabledUntil, setAnalyzeDisabledUntil] = useState<number>(0);
+  const [analyzeDisabledUntil, setAnalyzeDisabledUntil] = useState<boolean>(false);
 
   const { data: summary, isPending: sumPending, isError: sumError, error: sumErr, refetch: refetchSum } =
     useWorkerSummary(wid);
@@ -83,13 +83,14 @@ export function DashboardPage() {
           <span className="font-mono text-[10px] tracking-widest uppercase text-t3">Anomaly analysis</span>
           <button
             type="button"
-            disabled={analyzeWorker.isPending || !wid || Date.now() < analyzeDisabledUntil}
+            disabled={analyzeWorker.isPending || !wid || analyzeDisabledUntil}
             onClick={() => {
               analyzeWorker.mutate(undefined, {
                 onSuccess: (data) => {
                   const n = (data as { anomalies_cached?: number }).anomalies_cached ?? 0;
                   toast(`Analysis complete — ${n} cached anomalies`, 'success');
-                  setAnalyzeDisabledUntil(Date.now() + 30_000);
+                  setAnalyzeDisabledUntil(true);
+                  setTimeout(() => setAnalyzeDisabledUntil(false), 30_000);
                 },
                 onError: () => toast('Could not refresh anomaly analysis', 'error'),
               });

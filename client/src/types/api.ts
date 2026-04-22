@@ -14,6 +14,7 @@ export interface Shift {
   verification_status: 'pending' | 'verified' | 'disputed' | 'unverifiable';
   import_source: 'manual' | 'csv';
   created_at: string | null;
+  has_screenshot: boolean;
 }
 
 export interface ShiftCreatePayload {

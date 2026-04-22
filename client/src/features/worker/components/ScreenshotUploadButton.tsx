@@ -4,9 +4,10 @@ import { useUploadScreenshot } from '../../../hooks/useWorkerData';
 interface ScreenshotUploadButtonProps {
   shiftId: string;
   disabled?: boolean;
+  hasScreenshot?: boolean;
 }
 
-export function ScreenshotUploadButton({ shiftId, disabled }: ScreenshotUploadButtonProps) {
+export function ScreenshotUploadButton({ shiftId, disabled, hasScreenshot }: ScreenshotUploadButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadScreenshot();
 
@@ -29,9 +30,18 @@ export function ScreenshotUploadButton({ shiftId, disabled }: ScreenshotUploadBu
           type="button"
           disabled={disabled || upload.isPending}
           onClick={() => inputRef.current?.click()}
-          className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 border border-border rounded-sm hover:border-amber text-t2 disabled:opacity-40"
+          className={
+            'font-mono text-[9px] uppercase tracking-widest px-2 py-1 border rounded-sm disabled:opacity-40 ' +
+            (upload.isSuccess || hasScreenshot
+              ? 'border-jade text-jade hover:border-jade'
+              : 'border-border text-t2 hover:border-amber')
+          }
         >
-          {upload.isPending ? '…' : 'Screenshot'}
+          {upload.isPending
+            ? '…'
+            : upload.isSuccess || hasScreenshot
+              ? '✓ Uploaded'
+              : 'Screenshot'}
         </button>
         {upload.isError && (
           <span className="font-mono text-[9px] text-rust">Upload failed</span>

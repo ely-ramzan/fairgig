@@ -59,7 +59,12 @@ export function ShiftLogForm() {
 
             <div className="flex flex-col gap-1">
               <label className="font-mono text-[10px] tracking-widest uppercase text-t3">Date</label>
-              <input {...register('shift_date')} type="date"              max={new Date().toISOString().split('T')[0]}                className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber" />
+              <input
+                {...register('shift_date')}
+                type="date"
+                max={new Date().toISOString().split('T')[0]}
+                className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber"
+              />
               {errors.shift_date && <span className="font-mono text-[10px] text-rust">{errors.shift_date.message}</span>}
             </div>
 

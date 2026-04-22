@@ -35,7 +35,7 @@ export function ShiftRow({ shift }: ShiftRowProps) {
         <StatusPill status={shift.verification_status} />
       </td>
       <td className="py-3 px-4 text-right">
-        <ScreenshotUploadButton shiftId={shift.id} />
+        <ScreenshotUploadButton shiftId={shift.id} hasScreenshot={shift.has_screenshot} />
       </td>
     </tr>
   );

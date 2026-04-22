@@ -6,7 +6,7 @@ import uuid
 
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
-from app.models import ShiftLog, Platform, FileUpload
+from app.models import ShiftLog, Platform, FileUpload, Screenshot
 from app.schemas.earnings import ShiftCreate
 from app.services.cloudinary_service import upload_raw_file
 from app.services.import_service import parse_csv, parse_excel
@@ -14,7 +14,7 @@ from app.services.import_service import parse_csv, parse_excel
 router = APIRouter(prefix="/api/earnings", tags=["earnings"])
 
 
-def _shift_dict(s, platform_name: str | None = None) -> dict:
+def _shift_dict(s, platform_name: str | None = None, has_screenshot: bool = False) -> dict:
     return {
         "id": str(s.id),
         "worker_id": str(s.worker_id),
@@ -28,6 +28,7 @@ def _shift_dict(s, platform_name: str | None = None) -> dict:
         "verification_status": s.verification_status,
         "import_source": s.import_source,
         "created_at": str(s.created_at) if s.created_at else None,
+        "has_screenshot": has_screenshot,
     }
 
 
@@ -216,7 +217,15 @@ async def list_shifts(
     total = total_r.scalar()
 
     stmt = (
-        select(ShiftLog, Platform.name.label("platform_name"))
+        select(
+            ShiftLog,
+            Platform.name.label("platform_name"),
+            select(func.count(Screenshot.id))
+            .where(Screenshot.shift_log_id == ShiftLog.id)
+            .correlate(ShiftLog)
+            .scalar_subquery()
+            .label("screenshot_count"),
+        )
         .join(Platform, ShiftLog.platform_id == Platform.id)
         .where(*conditions)
         .order_by(ShiftLog.shift_date.desc())
@@ -227,7 +236,7 @@ async def list_shifts(
     rows = result.all()
 
     return {
-        "items": [_shift_dict(s, pname) for s, pname in rows],
+        "items": [_shift_dict(s, pname, bool(sc_count)) for s, pname, sc_count in rows],
         "total": total,
         "page": page,
         "limit": limit,

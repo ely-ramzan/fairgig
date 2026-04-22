@@ -3,7 +3,10 @@ import { z } from 'zod';
 export const shiftSchema = z
   .object({
     platform_id: z.string().uuid('Select a platform'),
-    shift_date: z.string().min(1, 'Date is required'),
+    shift_date: z.string().min(1, 'Date is required').refine(
+      (v) => v <= new Date().toISOString().split('T')[0],
+      'Date cannot be in the future',
+    ),
     hours_worked: z
       .number('Must be a number')
       .positive('Hours must be greater than 0')
