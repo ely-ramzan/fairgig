@@ -8,9 +8,14 @@ const verificationSchema = z.object({
   notes: z.string().optional(),
   verifier_gross: z.number().optional(),
   verifier_deductions: z.number().optional(),
-}).refine(
+})
+.refine(
   (d) => d.status === 'verified' || (d.notes && d.notes.trim().length >= 5),
   { message: 'Notes are required when disputing or marking unverifiable', path: ['notes'] },
+)
+.refine(
+  (d) => d.status !== 'disputed' || (d.verifier_gross !== undefined && !Number.isNaN(d.verifier_gross)),
+  { message: 'Enter what you see in the screenshot', path: ['verifier_gross'] },
 );
 
 type FormValues = z.infer<typeof verificationSchema>;
@@ -30,8 +35,19 @@ export function VerificationForm({ onSubmit, isPending }: VerificationFormProps)
 
   const status = useWatch({ control, name: 'status' });
 
+  const handleFormSubmit = handleSubmit((values) => {
+    onSubmit({
+      status: values.status,
+      // Strip notes and verifier figures when status is verified — prevents
+      // draft text typed before switching back to verified from leaking.
+      notes: values.status !== 'verified' ? values.notes : undefined,
+      verifier_gross: values.status === 'disputed' ? values.verifier_gross : undefined,
+      verifier_deductions: values.status === 'disputed' ? values.verifier_deductions : undefined,
+    });
+  });
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+    <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
       {/* Status */}
       <div className="flex gap-2">
         {(['verified', 'disputed', 'unverifiable'] as const).map((s) => (
@@ -73,6 +89,9 @@ export function VerificationForm({ onSubmit, isPending }: VerificationFormProps)
             <label className="font-mono text-[10px] tracking-widest uppercase text-t3">Verifier Gross (PKR)</label>
             <input {...register('verifier_gross', { valueAsNumber: true })} type="number" min="0"
               className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber" />
+            {errors.verifier_gross && (
+              <span className="font-mono text-[10px] text-rust">{errors.verifier_gross.message}</span>
+            )}
           </div>
           <div className="flex flex-col gap-1">
             <label className="font-mono text-[10px] tracking-widest uppercase text-t3">Verifier Deductions</label>

@@ -100,6 +100,13 @@ async def dashboard_summary(
         (await db.execute(text("SELECT COUNT(*) FROM platforms"))).scalar() or 0
     )
 
+    views_as_of_row = (
+        await db.execute(
+            text("SELECT MAX(week) FROM zone_earnings_summary")
+        )
+    ).fetchone()
+    views_as_of = views_as_of_row[0].isoformat() if views_as_of_row and views_as_of_row[0] else None
+
     return {
         "total_active_workers": active_workers,
         "total_shifts_logged": total_shifts,
@@ -110,4 +117,5 @@ async def dashboard_summary(
         "open_grievances": open_grievances,
         "top_complaint_category": top_category,
         "platforms_tracked": platform_count,
+        "views_as_of": views_as_of,
     }

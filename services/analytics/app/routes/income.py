@@ -16,15 +16,15 @@ async def income_distribution(
     query = text("""
         SELECT
             zone_name,
-            platform_name,
-            ROUND(p25_net::numeric, 2) AS p25_net,
-            ROUND(median_net::numeric, 2) AS p50_net,
-            ROUND(p75_net::numeric, 2) AS p75_net,
-            ROUND(avg_net::numeric, 2) AS avg_net,
-            worker_count
+            ROUND(AVG(p25_net)::numeric, 2)    AS p25_net,
+            ROUND(AVG(median_net)::numeric, 2)  AS p50_net,
+            ROUND(AVG(p75_net)::numeric, 2)    AS p75_net,
+            ROUND(AVG(avg_net)::numeric, 2)    AS avg_net,
+            SUM(worker_count)                   AS worker_count
         FROM zone_earnings_summary
         WHERE week = (SELECT MAX(week) FROM zone_earnings_summary)
-        ORDER BY zone_name, platform_name
+        GROUP BY zone_name
+        ORDER BY zone_name
     """)
     result = await db.execute(query)
     return [dict(row._mapping) for row in result.fetchall()]

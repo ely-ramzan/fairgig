@@ -76,6 +76,19 @@ class VerifyRequest(BaseModel):
     verifier_gross: Optional[_PositiveMoney] = None
     verifier_deductions: Optional[_NonNegMoney] = None
 
+    @model_validator(mode="after")
+    def validate_dispute_fields(self) -> "VerifyRequest":
+        if self.status in ("disputed", "unverifiable"):
+            if not self.notes or len(self.notes.strip()) < 5:
+                raise ValueError(
+                    "Notes (min 5 characters) are required when status is disputed or unverifiable"
+                )
+        if self.status == "disputed" and self.verifier_gross is None:
+            raise ValueError(
+                "verifier_gross is required when disputing a shift — enter what you see in the screenshot"
+            )
+        return self
+
 
 class ShiftListParams(BaseModel):
     page:       Annotated[int, Field(ge=1, default=1)]

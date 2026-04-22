@@ -18,12 +18,12 @@ async def commission_trends(
         SELECT
             platform_name,
             week,
-            ROUND(avg_commission_rate::numeric, 2) AS avg_commission_rate,
-            worker_count,
-            total_shifts
+            ROUND(AVG(avg_commission_rate)::numeric, 2) AS avg_commission_rate,
+            SUM(worker_count)  AS worker_count,
+            SUM(total_shifts)  AS total_shifts
         FROM zone_earnings_summary
         WHERE week >= NOW() - INTERVAL '1 month' * :months
-        GROUP BY platform_name, week, avg_commission_rate, worker_count, total_shifts
+        GROUP BY platform_name, week
         ORDER BY week, platform_name
     """)
     result = await db.execute(query, {"months": months})

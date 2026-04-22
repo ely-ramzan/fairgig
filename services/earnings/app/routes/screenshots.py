@@ -76,6 +76,13 @@ async def get_shift_screenshot(
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
+    # Workers may only access their own shift's screenshot
+    if _user["role"] == "worker":
+        shift_r = await db.execute(select(ShiftLog).where(ShiftLog.id == shift_id))
+        owned_shift = shift_r.scalar_one_or_none()
+        if not owned_shift or str(owned_shift.worker_id) != _user["user_id"]:
+            raise HTTPException(403, "Cannot access another worker's screenshot")
+
     result = await db.execute(
         select(Screenshot).where(Screenshot.shift_log_id == shift_id)
     )

@@ -3,6 +3,7 @@
 export interface Shift {
   id: string;
   worker_id: string;
+  worker_name?: string;
   platform_id: string;
   platform_name?: string;
   shift_date: string;
@@ -200,6 +201,8 @@ export interface AnalyticsDashboardSummary {
   open_grievances: number;
   top_complaint_category: string | null;
   platforms_tracked: number;
+  /** ISO date string of the latest week in zone_earnings_summary. Null if the view is empty. */
+  views_as_of: string | null;
 }
 
 export interface CommissionTrendPoint {
@@ -212,7 +215,6 @@ export interface CommissionTrendPoint {
 
 export interface IncomeDistributionPoint {
   zone_name: string;
-  platform_name: string;
   p25_net: number;
   p50_net: number;
   p75_net: number;
@@ -227,6 +229,7 @@ export interface VulnerabilityFlagRow {
   mom_drop_pct: number;
   prev_month_net: number;
   curr_month_net: number;
+  has_recent_anomalies: boolean;
 }
 
 export interface PlatformComparisonRow {

@@ -70,11 +70,13 @@ export function useVulnerabilityFlags(params?: { threshold?: number }) {
     staleTime: 1000 * 60 * 5,
     select: (rows: VulnerabilityFlagRow[]) =>
       rows.map((r) => ({
-        worker_id:      r.worker_id,
-        display_name:   r.display_name,
-        prev_month_net: r.prev_month_net,
-        curr_month_net: r.curr_month_net,
-        drop_pct:       r.mom_drop_pct,
+        worker_id:            r.worker_id,
+        display_name:         r.display_name,
+        city_zone:            r.city_zone,
+        prev_month_net:       r.prev_month_net,
+        curr_month_net:       r.curr_month_net,
+        drop_pct:             r.mom_drop_pct,
+        has_recent_anomalies: r.has_recent_anomalies ?? false,
       })),
   });
 }

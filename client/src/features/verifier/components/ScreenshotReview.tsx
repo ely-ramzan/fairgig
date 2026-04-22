@@ -79,7 +79,7 @@ export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: Scree
           aria-modal="true"
           aria-label="Screenshot preview"
           onClick={() => setModalOpen(false)}
-          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm overflow-y-auto p-4 sm:p-8"
+          className="fixed inset-0 z-100 bg-black/80 backdrop-blur-sm overflow-y-auto p-4 sm:p-8"
         >
           <button
             type="button"

@@ -68,6 +68,10 @@ export const earningsApi = {
     file: File,
     opts?: { onUploadProgress?: (p: number) => void; signal?: AbortSignal },
   ) => {
+    const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!ALLOWED_MIME.includes(file.type)) {
+      throw new Error('Screenshot must be a JPEG, PNG, or WebP image');
+    }
     assertFileSize(file, MAX_SCREENSHOT_BYTES, 'Screenshot');
     const formData = new FormData();
     formData.append('file', file);

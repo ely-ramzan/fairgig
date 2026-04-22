@@ -6,16 +6,19 @@ from app.config import get_settings
 
 bearer = HTTPBearer()
 
+# Module-level singleton — reuses the same TCP connection pool across all
+# requests instead of opening a new connection on every auth validation call.
+_http_client: httpx.AsyncClient = httpx.AsyncClient(timeout=10.0)
+
 
 async def get_current_user(
     creds: HTTPAuthorizationCredentials = Depends(bearer),
 ) -> dict:
     settings = get_settings()
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            f"{settings.auth_service_url}/api/auth/validate",
-            headers={"Authorization": f"Bearer {creds.credentials}"},
-        )
+    resp = await _http_client.get(
+        f"{settings.auth_service_url}/api/auth/validate",
+        headers={"Authorization": f"Bearer {creds.credentials}"},
+    )
     if resp.status_code != 200:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return resp.json()

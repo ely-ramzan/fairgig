@@ -22,11 +22,13 @@ export interface ZoneDistributionPoint {
 }
 
 export interface VulnerabilityFlag {
-  worker_id:     string;
-  display_name:  string;
-  prev_month_net: number;
-  curr_month_net: number;
-  drop_pct:      number;
+  worker_id:            string;
+  display_name:         string;
+  city_zone:            string;
+  prev_month_net:       number;
+  curr_month_net:       number;
+  drop_pct:             number;
+  has_recent_anomalies: boolean;
 }
 
 export interface PlatformComparisonPoint {

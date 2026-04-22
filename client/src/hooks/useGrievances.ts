@@ -13,6 +13,7 @@ export function useGrievanceClusters(params?: { days?: number; min_cluster_size?
   return useQuery({
     queryKey: ['grievances', 'clusters', params],
     queryFn: () => grievanceApi.getClusters(params).then((r) => r.data),
+    staleTime: 1000 * 60 * 5,
   });
 }
 

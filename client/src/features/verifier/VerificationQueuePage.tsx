@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { isAxiosError }     from 'axios';
 import { AppNav }            from '../../components/shared/AppNav';
 import { SerialHeader }      from '../../components/shared/SerialHeader';
@@ -12,6 +12,7 @@ import type { VerificationPayload } from '../../types/api';
 export function VerificationQueuePage() {
   const qc = useQueryClient();
   const [current, setCurrent] = useState(0);
+  const submittingShiftId = useRef<string | null>(null);
 
   const { data: queue, isPending, isError, error, refetch } = useQuery({
     queryKey: ['verification-queue'],
@@ -19,8 +20,10 @@ export function VerificationQueuePage() {
   });
 
   const submitVerification = useMutation({
-    mutationFn: ({ shiftId, payload }: { shiftId: string; payload: VerificationPayload }) =>
-      earningsApi.submitVerification(shiftId, payload),
+    mutationFn: ({ shiftId, payload }: { shiftId: string; payload: VerificationPayload }) => {
+      submittingShiftId.current = shiftId;
+      return earningsApi.submitVerification(shiftId, payload);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['verification-queue'] });
     },
@@ -36,7 +39,7 @@ export function VerificationQueuePage() {
     queryFn: async () => {
       if (!shift?.id) return null;
       try {
-        const r = await earningsApi.getScreenshot(shift.id, true);
+        const r = await earningsApi.getScreenshot(shift.id, false);
         return r.data;
       } catch (e) {
         if (isAxiosError(e) && e.response?.status === 404) return null;
@@ -100,20 +103,20 @@ export function VerificationQueuePage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              disabled={current === 0}
-              onClick={() => setCurrent((c) => Math.max(0, c - 1))}
+              disabled={safeCurrent === 0}
+              onClick={() => { setCurrent((c) => Math.max(0, c - 1)); submitVerification.reset(); }}
               className="font-mono text-[10px] uppercase tracking-widest px-2 py-1 border border-border rounded-sm text-t2 hover:text-t1 disabled:opacity-30 transition-colors"
             >
               ← Prev
             </button>
             <span className="font-mono text-[10px] text-t3">
-              {current + 1} / {shifts.length}
+              {safeCurrent + 1} / {shifts.length}
               <span className="text-t4"> · {pendingCount} pending</span>
             </span>
             <button
               type="button"
-              disabled={current >= shifts.length - 1}
-              onClick={() => setCurrent((c) => Math.min(shifts.length - 1, c + 1))}
+              disabled={safeCurrent >= shifts.length - 1}
+              onClick={() => { setCurrent((c) => Math.min(shifts.length - 1, c + 1)); submitVerification.reset(); }}
               className="font-mono text-[10px] uppercase tracking-widest px-2 py-1 border border-border rounded-sm text-t2 hover:text-t1 disabled:opacity-30 transition-colors"
             >
               Next →
@@ -161,7 +164,7 @@ export function VerificationQueuePage() {
             ) : screenshotMeta?.url ? (
               <ScreenshotReview
                 cloudinaryUrl={screenshotMeta.url}
-                workerName={`Worker ${shift.worker_id.slice(0, 8)}…`}
+                workerName={shift.worker_name ?? `Worker ${shift.worker_id.slice(0, 8)}…`}
                 shiftDate={shift.shift_date}
               />
             ) : (
@@ -199,7 +202,7 @@ export function VerificationQueuePage() {
           <VerificationForm
             key={shift.id}
             onSubmit={(payload) => submitVerification.mutate({ shiftId: shift.id, payload })}
-            isPending={submitVerification.isPending}
+            isPending={submitVerification.isPending && submittingShiftId.current === shift.id}
           />
         </div>
       </main>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppNav }               from '../../components/shared/AppNav';
 import { KpiCard }               from '../../components/shared/KpiCard';
 import { SerialHeader }          from '../../components/shared/SerialHeader';
@@ -39,13 +39,20 @@ function AnalyticsSkeleton() {
 
 export function AnalyticsDashboardPage() {
   const [vulnThreshold, setVulnThreshold] = useState(30);
+  // Debounce the slider so we only fire a new API request 400 ms after
+  // the user stops dragging rather than on every pixel of movement.
+  const [debouncedThreshold, setDebouncedThreshold] = useState(30);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedThreshold(vulnThreshold), 400);
+    return () => clearTimeout(t);
+  }, [vulnThreshold]);
 
   const { data: summary, isPending, isError, error, refetch } = useAnalyticsDashboard();
-  const { data: commData }    = useCommissionTrends();
-  const { data: incomeData }  = useIncomeDistribution();
-  const { data: vulnData }    = useVulnerabilityFlags({ threshold: vulnThreshold });
-  const { data: platformCmp } = usePlatformComparison({ months: 3 });
-  const { data: clusters, isPending: clustersPending } = useGrievanceClusters({
+  const { data: commData,    isError: commError    } = useCommissionTrends();
+  const { data: incomeData,  isError: incomeError  } = useIncomeDistribution();
+  const { data: vulnData,    isError: vulnError    } = useVulnerabilityFlags({ threshold: debouncedThreshold });
+  const { data: platformCmp, isError: platformError } = usePlatformComparison({ months: 3 });
+  const { data: clusters, isPending: clustersPending, isError: clustersError } = useGrievanceClusters({
     days: 30,
     min_cluster_size: 2,
   });
@@ -77,12 +84,30 @@ export function AnalyticsDashboardPage() {
             accent={!!summary && summary.avg_commission_rate > 25}
           />
           <KpiCard label="Open Grievances"    value={summary?.open_grievances ?? '—'} />
-          <KpiCard label="Vulnerability Flags" value={summary?.vulnerable_workers_count ?? '—'} accent />
+          <KpiCard label="Vulnerability Flags" value={summary?.vulnerable_workers_count ?? '—'} subtext="at 20% drop threshold" accent />
         </div>
+        {(() => {
+          const asOf = summary?.views_as_of;
+          if (!asOf) return null;
+          const date   = new Date(asOf);
+          const now    = new Date();
+          const ageMs  = now.getTime() - date.getTime();
+          const ageDays = ageMs / (1000 * 60 * 60 * 24);
+          // green-ish when fresh, amber when 1–3 days old, red when >3 days
+          const color  = ageDays > 3 ? 'text-rust' : ageDays > 1 ? 'text-amber' : 'text-t4';
+          const label  = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+          return (
+            <p className={`font-mono text-[9px] tracking-widest uppercase mb-8 -mt-5 ${color}`}>
+              View data as of {label}{ageDays > 1 ? ' \u00b7 refresh job may be overdue' : ' \u00b7 up to date'}
+            </p>
+          );
+        })()}
 
         <SectionDivider label="Commission trends" />
         <div className="bg-surface border border-border rounded-lg p-4 mb-8">
-          {commData && commData.series.length > 0 ? (
+          {commError ? (
+            <div className="h-40 flex items-center justify-center font-mono text-[10px] text-rust">Failed to load commission data</div>
+          ) : commData && commData.series.length > 0 ? (
             <CommissionTrendsChart data={commData.series} platforms={commData.platforms} />
           ) : (
             <div className="h-40 flex items-center justify-center font-mono text-[10px] text-t4">
@@ -93,7 +118,9 @@ export function AnalyticsDashboardPage() {
 
         <SectionDivider label="Platform comparison" />
         <div className="bg-surface border border-border rounded-lg p-4 mb-8">
-          {platformCmp && platformCmp.length > 0 ? (
+          {platformError ? (
+            <div className="h-40 flex items-center justify-center font-mono text-[10px] text-rust">Failed to load platform data</div>
+          ) : platformCmp && platformCmp.length > 0 ? (
             <PlatformComparisonChart data={platformCmp} />
           ) : (
             <div className="h-40 flex items-center justify-center font-mono text-[10px] text-t4">
@@ -106,6 +133,8 @@ export function AnalyticsDashboardPage() {
         <div className="bg-surface border border-border rounded-lg overflow-hidden mb-8">
           {clustersPending ? (
             <div className="h-32 animate-pulse bg-elevated m-4 rounded" />
+          ) : clustersError ? (
+            <div className="p-8 text-center font-mono text-[10px] text-rust">Failed to load grievance clusters</div>
           ) : clusters && clusters.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left font-mono text-[10px] text-t2">
@@ -120,7 +149,7 @@ export function AnalyticsDashboardPage() {
                 </thead>
                 <tbody>
                   {clusters.map((c) => (
-                    <tr key={`${c.platform_name}-${c.category}-${c.latest}`} className="border-b border-border/60">
+                    <tr key={`${c.platform_name}·${c.category}·${String(c.latest).slice(0, 10)}`} className="border-b border-border/60">
                       <td className="px-4 py-2 text-t1">{c.platform_name}</td>
                       <td className="px-4 py-2">{c.category}</td>
                       <td className="px-4 py-2 text-right">{c.complaint_count}</td>
@@ -140,7 +169,9 @@ export function AnalyticsDashboardPage() {
 
         <SectionDivider label="Zone income distribution" />
         <div className="bg-surface border border-border rounded-lg p-4 mb-8">
-          {incomeData && incomeData.length > 0 ? (
+          {incomeError ? (
+            <div className="h-40 flex items-center justify-center font-mono text-[10px] text-rust">Failed to load income data</div>
+          ) : incomeData && incomeData.length > 0 ? (
             <ZoneDistributionChart data={incomeData} />
           ) : (
             <div className="h-40 flex items-center justify-center font-mono text-[10px] text-t4">
@@ -167,7 +198,11 @@ export function AnalyticsDashboardPage() {
           <span className="font-mono text-[10px] text-t2 tabular-nums">{vulnThreshold}%</span>
         </div>
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
-          <VulnerabilityFlagsList flags={vulnData ?? []} />
+          {vulnError ? (
+            <div className="p-8 text-center font-mono text-[10px] text-rust">Failed to load vulnerability flags</div>
+          ) : (
+            <VulnerabilityFlagsList flags={vulnData ?? []} />
+          )}
         </div>
       </main>
     </>
