@@ -61,9 +61,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.colorScheme = mode;
   }, [tokens, mode]);
 
-  // Sync system preference on first load if no stored preference
+  // Sync system preference on first load only if Zustand has no persisted value.
+  // The store key is 'fg-theme'; check that before overriding with system pref.
   useEffect(() => {
-    const stored = localStorage.getItem('fg-theme-mode');
+    const stored = localStorage.getItem('fg-theme');
     if (!stored) {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       setMode(prefersDark ? 'dark' : 'light');

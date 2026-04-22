@@ -36,11 +36,20 @@ router.post("/", authenticate, async (req, res, next) => {
                     create: tags.map((tag) => ({ tag })),
                 },
             },
-            include: { grievance_tags: true },
+            include: {
+                grievance_tags: true,
+                worker: { select: { display_name: true } },
+                platform: { select: { name: true } },
+            },
         });
 
-        const out = { ...grievance };
-        if (out.is_anonymous) out.worker_id = null;
+        const { worker, platform, ...rest } = grievance;
+        const out = {
+            ...rest,
+            worker_id:    grievance.is_anonymous ? null : grievance.worker_id,
+            worker_name:  grievance.is_anonymous ? null : (worker?.display_name ?? null),
+            platform_name: platform?.name ?? null,
+        };
         return res.status(201).json(out);
     } catch (err) {
         next(err);
@@ -68,14 +77,20 @@ router.get("/", authenticate, async (req, res, next) => {
                 skip,
                 take: limit,
                 orderBy: { created_at: "desc" },
-                include: { grievance_tags: true },
+                include: {
+                    grievance_tags: true,
+                    worker: { select: { display_name: true } },
+                    platform: { select: { name: true } },
+                },
             }),
             prisma.grievances.count({ where }),
         ]);
 
-        const items = grievances.map((g) => ({
+        const items = grievances.map(({ worker, platform, ...g }) => ({
             ...g,
-            worker_id: g.is_anonymous ? null : g.worker_id,
+            worker_id:    g.is_anonymous ? null : g.worker_id,
+            worker_name:  g.is_anonymous ? null : (worker?.display_name ?? null),
+            platform_name: platform?.name ?? null,
         }));
 
         return res.json({
@@ -167,11 +182,21 @@ router.get("/:id", authenticate, async (req, res, next) => {
     try {
         const g = await prisma.grievances.findUnique({
             where: { id: req.params.id },
-            include: { grievance_tags: true },
+            include: {
+                grievance_tags: true,
+                worker: { select: { display_name: true } },
+                platform: { select: { name: true } },
+            },
         });
         if (!g) return res.status(404).json({ detail: "Grievance not found" });
 
-        const out = { ...g, worker_id: g.is_anonymous ? null : g.worker_id };
+        const { worker, platform, ...rest } = g;
+        const out = {
+            ...rest,
+            worker_id:    g.is_anonymous ? null : g.worker_id,
+            worker_name:  g.is_anonymous ? null : (worker?.display_name ?? null),
+            platform_name: platform?.name ?? null,
+        };
         return res.json(out);
     } catch (err) {
         next(err);
