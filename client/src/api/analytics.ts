@@ -22,4 +22,7 @@ export const analyticsApi = {
 
   platformComparison: (params?: { months?: number }, signal?: AbortSignal) =>
     analyticsClient.get<PlatformComparisonRow[]>('/api/analytics/platform-comparison', { params, signal }),
+
+  refreshViews: () =>
+    analyticsClient.post<{ refreshed: string[]; refreshed_at: string }>('/api/analytics/refresh-views'),
 };

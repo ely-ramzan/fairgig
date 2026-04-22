@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { analyticsApi } from '../api/analytics';
 import type { CommissionTrendPoint, VulnerabilityFlagRow } from '../types/api';
 
@@ -86,5 +86,19 @@ export function usePlatformComparison(params?: { months?: number }) {
     queryKey: ['analytics', 'platformComparison', params],
     queryFn: () => analyticsApi.platformComparison(params).then((r) => r.data),
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
+ * Triggers REFRESH MATERIALIZED VIEW on the backend, then invalidates
+ * all analytics queries so every section reloads with fresh data.
+ */
+export function useRefreshViews() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => analyticsApi.refreshViews().then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['analytics'] });
+    },
   });
 }

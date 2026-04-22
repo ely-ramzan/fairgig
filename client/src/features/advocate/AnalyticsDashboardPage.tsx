@@ -14,9 +14,25 @@ import {
   useIncomeDistribution,
   useVulnerabilityFlags,
   usePlatformComparison,
+  useRefreshViews,
 } from '../../hooks/useAnalytics';
 import { useGrievanceClusters } from '../../hooks/useGrievances';
 import { formatPercent } from '../../lib/formatting';
+
+type RefreshMutation = ReturnType<typeof useRefreshViews>;
+
+function RefreshButton({ refreshViews }: { refreshViews: RefreshMutation }) {
+  return (
+    <button
+      type="button"
+      disabled={refreshViews.isPending}
+      onClick={() => refreshViews.mutate()}
+      className="font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 border border-border rounded text-t3 hover:text-t1 hover:border-t2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+    >
+      {refreshViews.isPending ? 'refreshing…' : 'refresh now'}
+    </button>
+  );
+}
 
 function AnalyticsSkeleton() {
   return (
@@ -50,12 +66,13 @@ export function AnalyticsDashboardPage() {
   const { data: summary, isPending, isError, error, refetch } = useAnalyticsDashboard();
   const { data: commData,    isError: commError    } = useCommissionTrends();
   const { data: incomeData,  isError: incomeError  } = useIncomeDistribution();
-  const { data: vulnData,    isError: vulnError    } = useVulnerabilityFlags({ threshold: debouncedThreshold });
+  const { data: vulnData, isError: vulnError, isFetching: vulnFetching } = useVulnerabilityFlags({ threshold: debouncedThreshold });
   const { data: platformCmp, isError: platformError } = usePlatformComparison({ months: 3 });
   const { data: clusters, isPending: clustersPending, isError: clustersError } = useGrievanceClusters({
     days: 30,
     min_cluster_size: 2,
   });
+  const refreshViews = useRefreshViews();
 
   if (isPending) return <AnalyticsSkeleton />;
 
@@ -93,13 +110,38 @@ export function AnalyticsDashboardPage() {
           const now    = new Date();
           const ageMs  = now.getTime() - date.getTime();
           const ageDays = ageMs / (1000 * 60 * 60 * 24);
-          // green-ish when fresh, amber when 1–3 days old, red when >3 days
-          const color  = ageDays > 3 ? 'text-rust' : ageDays > 1 ? 'text-amber' : 'text-t4';
-          const label  = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+          // neutral up to 14 days (covers weekly-refresh schedules),
+          // amber 14–30 days, red beyond 30 days.
+          // NOTE: full class names must be literal strings so Tailwind's
+          // static scanner includes them in the bundle.
+          const label = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+          if (ageDays > 30) {
+            return (
+              <div className="flex items-center gap-3 mb-8 -mt-5">
+                <p className="font-mono text-[9px] tracking-widest uppercase text-rust">
+                  View data as of {label} · refresh job may be overdue
+                </p>
+                <RefreshButton refreshViews={refreshViews} />
+              </div>
+            );
+          }
+          if (ageDays > 14) {
+            return (
+              <div className="flex items-center gap-3 mb-8 -mt-5">
+                <p className="font-mono text-[9px] tracking-widest uppercase text-amber">
+                  View data as of {label} · refresh job may be overdue
+                </p>
+                <RefreshButton refreshViews={refreshViews} />
+              </div>
+            );
+          }
           return (
-            <p className={`font-mono text-[9px] tracking-widest uppercase mb-8 -mt-5 ${color}`}>
-              View data as of {label}{ageDays > 1 ? ' \u00b7 refresh job may be overdue' : ' \u00b7 up to date'}
-            </p>
+            <div className="flex items-center gap-3 mb-8 -mt-5">
+              <p className="font-mono text-[9px] tracking-widest uppercase text-t4">
+                View data as of {label} · up to date
+              </p>
+              <RefreshButton refreshViews={refreshViews} />
+            </div>
           );
         })()}
 
@@ -200,6 +242,18 @@ export function AnalyticsDashboardPage() {
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
           {vulnError ? (
             <div className="p-8 text-center font-mono text-[10px] text-rust">Failed to load vulnerability flags</div>
+          ) : vulnFetching ? (
+            <ul className="flex flex-col divide-y divide-border list-none m-0 p-0 animate-pulse">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <li key={i} className="py-3 px-4 flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="h-3 w-32 bg-elevated rounded" />
+                    <div className="h-2 w-44 bg-elevated rounded" />
+                  </div>
+                  <div className="h-3 w-16 bg-elevated rounded" />
+                </li>
+              ))}
+            </ul>
           ) : (
             <VulnerabilityFlagsList flags={vulnData ?? []} />
           )}

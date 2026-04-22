@@ -12,6 +12,7 @@ from app.routes.income import router as income_router
 from app.routes.vulnerability import router as vulnerability_router
 from app.routes.comparison import router as comparison_router
 from app.routes.dashboard import router as dashboard_router
+from app.routes.admin import router as admin_router
 
 logger = logging.getLogger("analytics")
 logging.basicConfig(level=logging.INFO)
@@ -96,6 +97,7 @@ app.include_router(income_router)
 app.include_router(vulnerability_router)
 app.include_router(comparison_router)
 app.include_router(dashboard_router)
+app.include_router(admin_router)
 
 
 @app.get("/health")
