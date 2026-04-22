@@ -79,7 +79,7 @@ export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: Scree
           aria-modal="true"
           aria-label="Screenshot preview"
           onClick={() => setModalOpen(false)}
-          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm overflow-y-auto p-4 sm:p-8"
         >
           <button
             type="button"
@@ -88,14 +88,14 @@ export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: Scree
               setModalOpen(false);
             }}
             aria-label="Close"
-            className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white font-mono text-lg transition-colors"
+            className="fixed top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white font-mono text-lg transition-colors z-10"
           >
             ×
           </button>
 
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-5xl max-h-full flex flex-col gap-3"
+            className="relative max-w-2xl mx-auto flex flex-col gap-3"
           >
             <div className="flex items-baseline justify-between text-white font-mono text-[11px] tracking-widest uppercase">
               <span>{workerName}</span>
@@ -104,7 +104,7 @@ export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: Scree
             <img
               src={cloudinaryUrl}
               alt={`Earnings screenshot — ${workerName}`}
-              className="max-w-full max-h-[80vh] object-contain rounded-lg bg-white"
+              className="max-w-full object-contain rounded-lg bg-white"
               onError={() => {
                 setBroken(true);
                 setModalOpen(false);
