@@ -110,12 +110,11 @@ export function AnalyticsDashboardPage() {
           const now    = new Date();
           const ageMs  = now.getTime() - date.getTime();
           const ageDays = ageMs / (1000 * 60 * 60 * 24);
-          // neutral up to 14 days (covers weekly-refresh schedules),
-          // amber 14–30 days, red beyond 30 days.
+          // neutral up to 7 days, amber 7–14 days, red beyond 14 days.
           // NOTE: full class names must be literal strings so Tailwind's
           // static scanner includes them in the bundle.
           const label = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-          if (ageDays > 30) {
+          if (ageDays > 14) {
             return (
               <div className="flex items-center gap-3 mb-8 -mt-5">
                 <p className="font-mono text-[9px] tracking-widest uppercase text-rust">
@@ -125,7 +124,7 @@ export function AnalyticsDashboardPage() {
               </div>
             );
           }
-          if (ageDays > 14) {
+          if (ageDays > 7) {
             return (
               <div className="flex items-center gap-3 mb-8 -mt-5">
                 <p className="font-mono text-[9px] tracking-widest uppercase text-amber">

@@ -22,7 +22,7 @@ async def income_distribution(
             ROUND(AVG(avg_net)::numeric, 2)    AS avg_net,
             SUM(worker_count)                   AS worker_count
         FROM zone_earnings_summary
-        WHERE week = (SELECT MAX(week) FROM zone_earnings_summary)
+        WHERE week >= (SELECT MAX(week) FROM zone_earnings_summary) - INTERVAL '4 weeks'
         GROUP BY zone_name
         ORDER BY zone_name
     """)

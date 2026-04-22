@@ -95,7 +95,7 @@ export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: Scree
 
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-2xl mx-auto flex flex-col gap-3"
+            className="relative max-w-lg mx-auto flex flex-col gap-3"
           >
             <div className="flex items-baseline justify-between text-white font-mono text-[11px] tracking-widest uppercase">
               <span>{workerName}</span>
@@ -104,7 +104,7 @@ export function ScreenshotReview({ cloudinaryUrl, workerName, shiftDate }: Scree
             <img
               src={cloudinaryUrl}
               alt={`Earnings screenshot — ${workerName}`}
-              className="max-w-full object-contain rounded-lg bg-white"
+              className="max-w-full max-h-[70vh] object-contain rounded-lg bg-white"
               onError={() => {
                 setBroken(true);
                 setModalOpen(false);

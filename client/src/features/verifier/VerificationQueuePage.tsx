@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { isAxiosError }     from 'axios';
 import { AppNav }            from '../../components/shared/AppNav';
 import { SerialHeader }      from '../../components/shared/SerialHeader';
@@ -12,7 +12,7 @@ import type { VerificationPayload } from '../../types/api';
 export function VerificationQueuePage() {
   const qc = useQueryClient();
   const [current, setCurrent] = useState(0);
-  const submittingShiftId = useRef<string | null>(null);
+  const [submittingShiftId, setSubmittingShiftId] = useState<string | null>(null);
 
   const { data: queue, isPending, isError, error, refetch } = useQuery({
     queryKey: ['verification-queue'],
@@ -21,10 +21,11 @@ export function VerificationQueuePage() {
 
   const submitVerification = useMutation({
     mutationFn: ({ shiftId, payload }: { shiftId: string; payload: VerificationPayload }) => {
-      submittingShiftId.current = shiftId;
+      setSubmittingShiftId(shiftId);
       return earningsApi.submitVerification(shiftId, payload);
     },
     onSuccess: () => {
+      setSubmittingShiftId(null);
       qc.invalidateQueries({ queryKey: ['verification-queue'] });
     },
   });
@@ -202,7 +203,7 @@ export function VerificationQueuePage() {
           <VerificationForm
             key={shift.id}
             onSubmit={(payload) => submitVerification.mutate({ shiftId: shift.id, payload })}
-            isPending={submitVerification.isPending && submittingShiftId.current === shift.id}
+            isPending={submitVerification.isPending && submittingShiftId === shift.id}
           />
         </div>
       </main>
