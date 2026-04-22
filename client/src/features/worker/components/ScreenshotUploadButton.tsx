@@ -24,14 +24,19 @@ export function ScreenshotUploadButton({ shiftId, disabled }: ScreenshotUploadBu
           e.target.value = '';
         }}
       />
-      <button
-        type="button"
-        disabled={disabled || upload.isPending}
-        onClick={() => inputRef.current?.click()}
-        className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 border border-border rounded-sm hover:border-amber text-t2 disabled:opacity-40"
-      >
-        {upload.isPending ? '…' : 'Screenshot'}
-      </button>
+      <div className="flex flex-col items-end gap-0.5">
+        <button
+          type="button"
+          disabled={disabled || upload.isPending}
+          onClick={() => inputRef.current?.click()}
+          className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 border border-border rounded-sm hover:border-amber text-t2 disabled:opacity-40"
+        >
+          {upload.isPending ? '…' : 'Screenshot'}
+        </button>
+        {upload.isError && (
+          <span className="font-mono text-[9px] text-rust">Upload failed</span>
+        )}
+      </div>
     </>
   );
 }

@@ -1,4 +1,5 @@
 import type { ImportRecord } from '../../../types/api';
+import { formatDate } from '../../../lib/formatting';
 
 interface ImportHistoryListProps {
   items: ImportRecord[];
@@ -17,7 +18,7 @@ export function ImportHistoryList({ items }: ImportHistoryListProps) {
             {u.rows_imported} ok / {u.rows_errored} err
           </span>
           <span className="uppercase text-t2">{u.import_status}</span>
-          <span className="text-t4 w-full sm:w-auto">{u.uploaded_at}</span>
+          <span className="text-t4 w-full sm:w-auto">{formatDate(u.uploaded_at)}</span>
         </li>
       ))}
     </ul>

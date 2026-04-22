@@ -14,16 +14,19 @@ export function CsvImportPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const { data: history } = useImportHistory();
   const [lastResult, setLastResult] = useState<CsvImportResponse | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setFileError(null);
     const fd = new FormData();
     fd.append('file', file);
     try {
       const res = await importCsv.mutateAsync(fd);
       setLastResult(res);
-    } catch {
+    } catch (err) {
+      setFileError(err instanceof Error ? err.message : 'Import failed. Check file format.');
       setLastResult(null);
     }
     e.target.value = '';
@@ -52,8 +55,10 @@ export function CsvImportPage() {
             {importCsv.isPending ? 'Importing…' : 'Choose file'}
           </button>
 
-          {importCsv.isError && (
-            <div className="font-mono text-[10px] text-rust">Import failed. Check file format.</div>
+          {(importCsv.isError || fileError) && (
+            <div className="font-mono text-[10px] text-rust">
+              {fileError ?? 'Import failed. Check file format.'}
+            </div>
           )}
 
           {lastResult && <ImportResultCard result={lastResult} />}

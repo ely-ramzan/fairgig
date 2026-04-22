@@ -6,6 +6,7 @@ import { AnomalyCallout }   from '../../components/shared/AnomalyCallout';
 import { SectionDivider }   from '../../components/shared/SectionDivider';
 import { ErrorState }       from '../../components/shared/ErrorState';
 import { EarningsTrendChart } from './components/EarningsTrendChart';
+import { CommissionBarChart } from './components/CommissionBarChart';
 import { ShiftTable }       from './components/ShiftTable';
 import { WorkerPercentileCard } from './components/WorkerPercentileCard';
 import { useWorkerSummary, useWorkerTrends, useAnalyzeWorker } from '../../hooks/useWorkerData';
@@ -13,7 +14,7 @@ import { useShifts }        from '../../hooks/useShifts';
 import { useAnomalies }     from '../../hooks/useAnomalies';
 import { useCurrentUser }   from '../../stores/authStore';
 import { useToast }         from '../../stores/uiStore';
-import { fromWorkerEarningsTrend } from '../../lib/chartHelpers';
+import { fromWorkerEarningsTrend, fromCommissionTrend } from '../../lib/chartHelpers';
 import { formatPKR, formatHours, formatPercent } from '../../lib/formatting';
 
 function DashboardSkeleton() {
@@ -40,6 +41,7 @@ export function DashboardPage() {
   const wid  = user?.id ?? '';
   const { toast } = useToast();
   const analyzeWorker = useAnalyzeWorker();
+  const [analyzeDisabledUntil, setAnalyzeDisabledUntil] = useState<number>(0);
 
   const { data: summary, isPending: sumPending, isError: sumError, error: sumErr, refetch: refetchSum } =
     useWorkerSummary(wid);
@@ -64,6 +66,7 @@ export function DashboardPage() {
 
   const recentShifts  = recentPage?.items ?? [];
   const trendData     = trends ? fromWorkerEarningsTrend(trends.earnings_trend) : [];
+  const commissionData = trends ? fromCommissionTrend(trends.commission_trend) : [];
   const lastWeekNet   = trends?.earnings_trend?.at(-1)?.net_income;
   const allAnomalies  = anomalies ?? [];
   const highAnomalies = allAnomalies.filter((a) => a.severity === 'high');
@@ -80,12 +83,13 @@ export function DashboardPage() {
           <span className="font-mono text-[10px] tracking-widest uppercase text-t3">Anomaly analysis</span>
           <button
             type="button"
-            disabled={analyzeWorker.isPending || !wid}
+            disabled={analyzeWorker.isPending || !wid || Date.now() < analyzeDisabledUntil}
             onClick={() => {
               analyzeWorker.mutate(undefined, {
                 onSuccess: (data) => {
                   const n = (data as { anomalies_cached?: number }).anomalies_cached ?? 0;
                   toast(`Analysis complete — ${n} cached anomalies`, 'success');
+                  setAnalyzeDisabledUntil(Date.now() + 30_000);
                 },
                 onError: () => toast('Could not refresh anomaly analysis', 'error'),
               });
@@ -203,6 +207,17 @@ export function DashboardPage() {
           ) : (
             <div className="h-40 flex items-center justify-center font-mono text-[10px] text-t4">
               No trend data yet — log more shifts to see your chart
+            </div>
+          )}
+        </div>
+
+        <SectionDivider label="Commission trend" />
+        <div className="bg-surface border border-border rounded-lg p-4 mb-8">
+          {commissionData.length > 0 ? (
+            <CommissionBarChart data={commissionData} />
+          ) : (
+            <div className="h-28 flex items-center justify-center font-mono text-[10px] text-t4">
+              No commission data yet
             </div>
           )}
         </div>

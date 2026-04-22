@@ -7,6 +7,7 @@ export function useAnomalies(workerId: string) {
     queryKey: ['anomalies', workerId],
     queryFn:  () => anomalyApi.getWorkerAnomalies(workerId).then((r) => r.data),
     enabled:  !!workerId,
+    staleTime: 1000 * 60 * 10,
   });
 }
 

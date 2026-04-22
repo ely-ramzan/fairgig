@@ -1,4 +1,4 @@
-import { useForm }       from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver }   from '@hookform/resolvers/zod';
 import { AppNav }        from '../../components/shared/AppNav';
 import { SerialHeader }  from '../../components/shared/SerialHeader';
@@ -6,6 +6,7 @@ import { useCreateShift } from '../../hooks/useShifts';
 import { usePlatforms }  from '../../hooks/useWorkerData';
 import { shiftSchema, type ShiftFormValues } from '../../schemas/shiftSchema';
 import { useNavigate }   from 'react-router-dom';
+import { formatPKR }     from '../../lib/formatting';
 
 export function ShiftLogForm() {
   const navigate    = useNavigate();
@@ -15,8 +16,18 @@ export function ShiftLogForm() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ShiftFormValues>({ resolver: zodResolver(shiftSchema) });
+
+  const grossVal      = useWatch({ control, name: 'gross_earned' });
+  const deductionsVal = useWatch({ control, name: 'platform_deductions' });
+  const expectedNet =
+    typeof grossVal === 'number' && !isNaN(grossVal) &&
+    typeof deductionsVal === 'number' && !isNaN(deductionsVal) &&
+    grossVal > 0
+      ? grossVal - deductionsVal
+      : null;
 
   const onSubmit = async (data: ShiftFormValues) => {
     await createShift.mutateAsync(data);
@@ -48,8 +59,7 @@ export function ShiftLogForm() {
 
             <div className="flex flex-col gap-1">
               <label className="font-mono text-[10px] tracking-widest uppercase text-t3">Date</label>
-              <input {...register('shift_date')} type="date"
-                className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber" />
+              <input {...register('shift_date')} type="date"              max={new Date().toISOString().split('T')[0]}                className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber" />
               {errors.shift_date && <span className="font-mono text-[10px] text-rust">{errors.shift_date.message}</span>}
             </div>
 
@@ -80,6 +90,9 @@ export function ShiftLogForm() {
                 <input {...register('net_received', { valueAsNumber: true })} type="number" min="0"
                   className="bg-elevated border border-border rounded px-3 py-2 font-sans text-sm text-t1 focus:outline-none focus:border-amber" />
                 {errors.net_received && <span className="font-mono text-[10px] text-rust">{errors.net_received.message}</span>}
+                {expectedNet !== null && !errors.net_received && (
+                  <span className="font-mono text-[9px] text-t3">Expected: {formatPKR(expectedNet)}</span>
+                )}
               </div>
             </div>
 

@@ -5,7 +5,7 @@ interface ShiftTableProps {
   shifts: Shift[];
 }
 
-const HEADERS = ['Date', 'Platform', 'Hours', 'Net', 'Commission', 'Status', 'Shot'];
+const HEADERS = ['Date', 'Platform', 'Hours', 'Net', 'Commission', 'Status', 'Screenshot'];
 
 export function ShiftTable({ shifts }: ShiftTableProps) {
   if (shifts.length === 0) {

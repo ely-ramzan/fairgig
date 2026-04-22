@@ -55,11 +55,36 @@ async def import_shifts(
     else:
         valid_rows, errors = parse_excel(file_bytes, platform_map, filename)
 
+    worker_uuid = uuid.UUID(user["user_id"])
+
+    # Filter out rows that already exist in the DB to prevent double-imports.
+    if valid_rows:
+        existing_r = await db.execute(
+            select(ShiftLog.shift_date, ShiftLog.platform_id)
+            .where(ShiftLog.worker_id == worker_uuid)
+        )
+        existing_pairs = {
+            (row.shift_date, row.platform_id) for row in existing_r.all()
+        }
+        deduped: list = []
+        for row in valid_rows:
+            key = (row["shift_date"], uuid.UUID(row["platform_id"]))
+            if key in existing_pairs:
+                errors.append({
+                    "row": "—",
+                    "reason": (
+                        f"Duplicate: shift on {row['shift_date']} for this "
+                        "platform already exists in your account"
+                    ),
+                })
+            else:
+                deduped.append(row)
+        valid_rows = deduped
+
     # upload to Cloudinary
     upload_result = upload_raw_file(file_bytes, filename)
 
     # persist FileUpload record
-    worker_uuid = uuid.UUID(user["user_id"])
     file_upload = FileUpload(
         id=uuid.uuid4(),
         worker_id=worker_uuid,
@@ -155,7 +180,9 @@ async def create_shift(
     db.add(shift)
     await db.commit()
     await db.refresh(shift)
-    return _shift_dict(shift)
+    plat_r = await db.execute(select(Platform).where(Platform.id == shift.platform_id))
+    platform = plat_r.scalar_one_or_none()
+    return _shift_dict(shift, platform.name if platform else None)
 
 
 # GET /api/earnings/shifts  (paginated, own shifts only)
@@ -168,36 +195,34 @@ async def list_shifts(
     date_from: date = None,
     date_to: date = None,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("worker")),
 ):
-    base = select(ShiftLog).where(ShiftLog.worker_id == uuid.UUID(user["user_id"]))
+    worker_uuid = uuid.UUID(user["user_id"])
+    # Build conditions once — reused for both count and data queries to
+    # guarantee the pagination total always matches the returned rows.
+    conditions = [ShiftLog.worker_id == worker_uuid]
     if platform_id:
-        base = base.where(ShiftLog.platform_id == uuid.UUID(platform_id))
+        conditions.append(ShiftLog.platform_id == uuid.UUID(platform_id))
     if status:
-        base = base.where(ShiftLog.verification_status == status)
+        conditions.append(ShiftLog.verification_status == status)
     if date_from:
-        base = base.where(ShiftLog.shift_date >= date_from)
+        conditions.append(ShiftLog.shift_date >= date_from)
     if date_to:
-        base = base.where(ShiftLog.shift_date <= date_to)
+        conditions.append(ShiftLog.shift_date <= date_to)
 
-    total_r = await db.execute(select(func.count()).select_from(base.subquery()))
+    total_r = await db.execute(
+        select(func.count(ShiftLog.id)).where(*conditions)
+    )
     total = total_r.scalar()
 
     stmt = (
         select(ShiftLog, Platform.name.label("platform_name"))
         .join(Platform, ShiftLog.platform_id == Platform.id)
-        .where(ShiftLog.worker_id == uuid.UUID(user["user_id"]))
+        .where(*conditions)
+        .order_by(ShiftLog.shift_date.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
     )
-    if platform_id:
-        stmt = stmt.where(ShiftLog.platform_id == uuid.UUID(platform_id))
-    if status:
-        stmt = stmt.where(ShiftLog.verification_status == status)
-    if date_from:
-        stmt = stmt.where(ShiftLog.shift_date >= date_from)
-    if date_to:
-        stmt = stmt.where(ShiftLog.shift_date <= date_to)
-
-    stmt = stmt.order_by(ShiftLog.shift_date.desc()).offset((page - 1) * limit).limit(limit)
     result = await db.execute(stmt)
     rows = result.all()
 
@@ -230,6 +255,8 @@ async def get_worker_shifts_raw(
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ):
+    if _user["role"] == "worker" and _user["user_id"] != str(worker_id):
+        raise HTTPException(403, "Cannot access another worker's shifts")
     stmt = (
         select(ShiftLog, Platform.name.label("platform_name"))
         .join(Platform, ShiftLog.platform_id == Platform.id)

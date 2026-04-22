@@ -38,6 +38,13 @@ async def upload_shift_screenshot(
     if str(shift.worker_id) != user["user_id"]:
         raise HTTPException(403, "Cannot upload screenshot for another worker's shift")
 
+    ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp"}
+    if file.content_type not in ALLOWED_MIME:
+        raise HTTPException(
+            415,
+            f"Unsupported file type '{file.content_type}'. Use JPEG, PNG, or WebP.",
+        )
+
     file_bytes = await file.read()
     upload = upload_screenshot(file_bytes, user["user_id"], str(shift_id))
 

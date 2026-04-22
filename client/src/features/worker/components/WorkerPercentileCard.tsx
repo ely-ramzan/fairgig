@@ -18,17 +18,24 @@ export function WorkerPercentileCard({ rows, workerWeeklyNet }: WorkerPercentile
       />
     );
   }
-  const latest = rows[rows.length - 1];
+  const latestWeek = rows[rows.length - 1].week;
+  const latestRows = rows.filter((r) => r.week === latestWeek);
   return (
     <div className="bg-surface border border-border rounded-sm p-4">
-      <div className="font-mono text-[9px] tracking-widest uppercase text-t3 mb-2">Zone median (latest week)</div>
-      <div className="font-serif text-xl text-t1">{latest.platform_name}</div>
-      <div className="font-mono text-[10px] text-t2 mt-1">
-        City median net {formatPKR(latest.city_median)} · P25–P75 {formatPKR(latest.p25_net)} –{' '}
-        {formatPKR(latest.p75_net)}
+      <div className="font-mono text-[9px] tracking-widest uppercase text-t3 mb-3">Zone median (latest week)</div>
+      <div className="flex flex-col gap-3">
+        {latestRows.map((row) => (
+          <div key={row.platform_name}>
+            <div className="font-serif text-base text-t1">{row.platform_name}</div>
+            <div className="font-mono text-[10px] text-t2 mt-0.5">
+              City median net {formatPKR(row.city_median)} · P25–P75 {formatPKR(row.p25_net)} –{' '}
+              {formatPKR(row.p75_net)}
+            </div>
+          </div>
+        ))}
       </div>
       {workerWeeklyNet != null && (
-        <div className="font-sans text-xs text-t3 mt-2">Your week (net): {formatPKR(workerWeeklyNet)}</div>
+        <div className="font-sans text-xs text-t3 mt-3">Your week (net): {formatPKR(workerWeeklyNet)}</div>
       )}
     </div>
   );

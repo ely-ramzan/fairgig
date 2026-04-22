@@ -1,6 +1,6 @@
 import type { Shift } from '../types/api';
 import type { EarningsTrendPoint, CommissionPoint } from '../types/charts';
-import type { EarningsTrendRow } from '../types/api';
+import type { EarningsTrendRow, CommissionTrendRow } from '../types/api';
 import { formatShortDate } from './formatting';
 
 // Transform raw shifts array into Recharts-compatible weekly earnings series.
@@ -10,6 +10,15 @@ export function fromWorkerEarningsTrend(rows: EarningsTrendRow[]): EarningsTrend
   return rows.map((r) => ({
     date: formatShortDate(String(r.week)),
     net_received: Math.round(r.net_income),
+  }));
+}
+
+/** Commission rate trend from GET /earnings/worker/:id/trends */
+export function fromCommissionTrend(rows: CommissionTrendRow[]): CommissionPoint[] {
+  return rows.map((r) => ({
+    date: formatShortDate(String(r.week)),
+    platform: r.platform_name,
+    commission_rate: Math.round(r.commission_rate * 10) / 10,
   }));
 }
 
