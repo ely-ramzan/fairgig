@@ -37,11 +37,33 @@ export function VerificationForm({ onSubmit, isPending }: VerificationFormProps)
         {(['verified', 'disputed', 'unverifiable'] as const).map((s) => (
           <label key={s} className="flex-1">
             <input {...register('status')} type="radio" value={s} className="sr-only peer" />
-            <div className={`text-center py-2 rounded border font-mono text-[10px] tracking-widest uppercase cursor-pointer transition-colors peer-checked:border-amber peer-checked:text-amber border-border text-t3 hover:border-t2`}>
+            <div className={`text-center py-2 rounded border font-mono text-[10px] tracking-widest uppercase cursor-pointer transition-colors peer-checked:bg-amber peer-checked:border-amber peer-checked:text-bg peer-checked:font-bold border-border text-t3 hover:border-t2`}>
               {s}
             </div>
           </label>
         ))}
+      </div>
+
+      {/* Status description — always visible so verifier knows what they're submitting */}
+      <div className="bg-elevated border border-border rounded px-3 py-2 font-mono text-[10px] text-t2 leading-relaxed">
+        {status === 'verified' && (
+          <span>
+            <span className="text-amber font-bold">✓ VERIFIED</span>
+            <span className="text-t3"> — numbers match the screenshot. No edits needed. Clicking submit will approve this shift as-is.</span>
+          </span>
+        )}
+        {status === 'disputed' && (
+          <span>
+            <span className="text-amber font-bold">⚠ DISPUTED</span>
+            <span className="text-t3"> — numbers don't match. Enter what you see in the screenshot below and explain the discrepancy.</span>
+          </span>
+        )}
+        {status === 'unverifiable' && (
+          <span>
+            <span className="text-amber font-bold">✗ UNVERIFIABLE</span>
+            <span className="text-t3"> — screenshot is missing, illegible, or fraudulent. Explain why in notes.</span>
+          </span>
+        )}
       </div>
 
       {/* Verifier reads — only shown when disputing */}

@@ -190,7 +190,14 @@ export function VerificationQueuePage() {
             </div>
           )}
 
+          {submitVerification.isSuccess && !submitVerification.isPending && (
+            <div className="font-mono text-[10px] text-amber bg-amber/10 border border-amber/30 rounded px-3 py-2">
+              ✓ Verdict submitted — queue updated, next shift loaded
+            </div>
+          )}
+
           <VerificationForm
+            key={shift.id}
             onSubmit={(payload) => submitVerification.mutate({ shiftId: shift.id, payload })}
             isPending={submitVerification.isPending}
           />
